@@ -1,4 +1,4 @@
-# Reverse-Engineering-Model
+# Reverse-Engineering-Model-1
 
 
 The way that STL, or stereolithography file works, is a file that stores a series of 3 coordinate points that formes many triangles that can be rendered into a 3d shape. The way that CAD software works however, is by using a set of sketches on a 2d plane, and applying features to that sketch such as extrudes, revolves, etc. Instead of a list of points, it stores the file as a set of instructions to be rendered(example image below).
