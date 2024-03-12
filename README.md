@@ -14,4 +14,4 @@ This shape is made by drawing a sketch and revolving it around the line in the c
 The same shape, saved as an STL file looks like a set of triangles creating a surface. No software can read this as a circle.
 
 TL;DR - STL files are used for renders and 3d printing, and many times people publish stl files online, but they can't be easily modified without manually reverse engineering it.
-This tool would be able to intelligently produce a parametric 3d-model from a static 3d-model
+This tool would be able to intelligently produce a parameterized 3d-model from a static 3d-model.
