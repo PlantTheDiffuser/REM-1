@@ -1,28 +1,38 @@
+import torch
 import os
-import subprocess
+import numpy
+import stltovoxel
+from pathlib import Path
+
+resolution = 100
 
 # Get current script directory
-current_dir = os.path.dirname(os.path.abspath(__file__))
+current_dir = Path(__file__).resolve().parent
 
-# Define the data folder path
-CADmodel = os.path.join(current_dir, "PreflightCheckTrainingData/CADmodel")
-MESHmodel = os.path.join(current_dir, "PreflightCheckTrainingData/MESHmodel")
+CADmodel = str(current_dir / 'PreflightCheckTrainingData/CADmodel')
+MESHmodel = str(current_dir / 'PreflightCheckTrainingData/MESHmodel')
 
 # Example: list files
 for filename in os.listdir(CADmodel):
     if filename.endswith(".stl"):
-        print(filename)
+        stlFileIn = os.path.join(CADmodel, filename)
+        voxelOut = CADmodel + '/' + os.path.splitext(filename)[0]
+        try:
+            os.mkdir(voxelOut)
+        except FileExistsError:
+            pass
+        voxelOut = voxelOut + '/' + os.path.splitext(filename)[0] + '.png'
+        stltovoxel.doExport(stlFileIn, voxelOut, resolution)
+
 for filename in os.listdir(MESHmodel):
     if filename.endswith(".stl"):
-        print(filename)
+        stlFileIn = os.path.join(MESHmodel, filename)
+        voxelOut = MESHmodel + '/' + os.path.splitext(filename)[0]
+        try:
+            os.mkdir(voxelOut)
+        except FileExistsError:
+            pass
+        voxelOut = voxelOut + '/' + os.path.splitext(filename)[0] + '.png'
+        stltovoxel.doExport(stlFileIn, voxelOut, resolution)
 
-
-# Example: run the conversion with args
-convertscript = os.path.join(current_dir, "ConvertSTLtoVoxel.py")
-subprocess.run([
-    "python3", convertscript,
-    CADmodel,
-    "-r", "100"
-])
-
-print("done")
+print('done')
