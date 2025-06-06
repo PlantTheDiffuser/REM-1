@@ -1,7 +1,5 @@
 import torch
-import os
-import numpy
-import stltovoxel
+import numpy as np
 from pathlib import Path
 import ConvertSTLtoVoxel as conv
 
@@ -17,4 +15,3 @@ MESHmodel = str(current_dir / 'PreflightCheckTrainingData/MESHmodel')
 conv.process_stl_files(CADmodel, resolution)
 conv.process_stl_files(MESHmodel, resolution)
 
-print('done')
