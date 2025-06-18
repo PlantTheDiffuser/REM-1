@@ -7,9 +7,10 @@ from torchvision import transforms, models, datasets
 from PIL import Image
 from pathlib import Path
 import ConvertSTLtoVoxel as conv
+import shutil
 
 resolution = 100  # Number of slices/images per file
-convert = False   # Set to True if you need to convert STL files to PNG
+convert = True   # Set to True if you need to convert STL files to PNG
 
 # Get current script directory
 current_dir = Path(__file__).resolve().parent
@@ -23,6 +24,17 @@ if convert:
 
     conv.stack_pngs_vertically(CADmodel)
     conv.stack_pngs_vertically(MESHmodel)
+
+    # Delete subdirectories insdie both CADmodel and MESHmodel and all data inside them.
+    for subdir in Path(CADmodel).iterdir():
+        if subdir.is_dir():
+            shutil.rmtree(subdir)
+    print(f"Nuked: CADmodel subdirectories")
+    for subdir in Path(MESHmodel).iterdir():
+        if subdir.is_dir():
+            shutil.rmtree(subdir)
+    print(f"Nuked: MESHmodel subdirectories")
+
 
 # ---------- Dataset Setup ----------
 class ResizeKeepAspect:
@@ -114,6 +126,9 @@ def predict_image(image_path):
         _, pred = torch.max(output, 1)
         return dataset.classes[pred.item()]
 
-# Example prediction
-test_img = Path(CADmodel) / "model1.png"
-print("Prediction:", predict_image(test_img))
+# Example prediction: goes through the CADmodel directory and tests images
+for img_path in Path(CADmodel).glob("*.png"):
+    print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
+# Example prediction: goes through the MESHmodel directory and tests images
+for img_path in Path(MESHmodel).glob("*.png"):
+    print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
