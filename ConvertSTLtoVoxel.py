@@ -10,6 +10,10 @@ def process_stl_files(input_dir, resolution=100):
     def normalize_stl(in_path):
         mesh = trimesh.load(in_path)
 
+        # Skip files with too many triangles
+        if mesh.faces.shape[0] > 1_000_000:
+            raise ValueError(f"Mesh too complex: {mesh.faces.shape[0]} faces")
+
         # Scale mesh to fit into a cube of `resolution` units
         scale_factor = resolution / mesh.extents.max()
         mesh.apply_scale(scale_factor)
@@ -27,51 +31,37 @@ def process_stl_files(input_dir, resolution=100):
             voxel_out_dir = os.path.join(input_dir, base_name)
             os.makedirs(voxel_out_dir, exist_ok=True)
 
-            # Normalize mesh
-            normalized_mesh = normalize_stl(stl_file_in)
+            try:
+                # Normalize and voxelize
+                normalized_mesh = normalize_stl(stl_file_in)
+                pitch = 1.0
+                vox = normalized_mesh.voxelized(pitch)
+                vox_matrix = np.transpose(vox.matrix.astype(np.uint8), (2, 1, 0))
 
-            # Voxelize with pitch = 1 (1 unit = 1 voxel)
-            pitch = 1.0
-            vox = normalized_mesh.voxelized(pitch)
-            # Transpose from (Z, Y, X) → (X, Y, Z)
-            vox_matrix = np.transpose(vox.matrix.astype(np.uint8), (2, 1, 0))
+                # Pad to cube
+                padded = np.zeros((resolution, resolution, resolution), dtype=np.uint8)
+                for i in range(3):
+                    if vox_matrix.shape[i] > resolution:
+                        start_crop = (vox_matrix.shape[i] - resolution) // 2
+                        end_crop = start_crop + resolution
+                        vox_matrix = np.take(vox_matrix, indices=range(start_crop, end_crop), axis=i)
+                offset = [(resolution - s) // 2 for s in vox_matrix.shape]
+                end = [offset[i] + vox_matrix.shape[i] for i in range(3)]
+                padded[offset[0]:end[0], offset[1]:end[1], offset[2]:end[2]] = vox_matrix
 
-            # Init cube
-            padded = np.zeros((resolution, resolution, resolution), dtype=np.uint8)
+                # Save each slice
+                for z in range(resolution):
+                    slice_img = (padded[:, :, z] * 255).astype(np.uint8)
+                    img = Image.fromarray(slice_img, mode='L')
+                    img.save(os.path.join(voxel_out_dir, f"slice_{z:03d}.png"))
 
-            # Compute safe offsets and crop ranges
-            for i in range(3):
-                if vox_matrix.shape[i] > resolution:
-                    # Crop the voxel matrix to fit the cube
-                    start_crop = (vox_matrix.shape[i] - resolution) // 2
-                    end_crop = start_crop + resolution
-                    vox_matrix = np.take(vox_matrix, indices=range(start_crop, end_crop), axis=i)
+                print(f'✅ Saved {resolution} slices to {voxel_out_dir}')
 
-            # Recompute shape-based offset
-            offset = [(resolution - s) // 2 for s in vox_matrix.shape]
-            end = [offset[i] + vox_matrix.shape[i] for i in range(3)]
-
-            # Assign cropped voxel matrix into the cube
-            padded[
-                offset[0]:end[0],
-                offset[1]:end[1],
-                offset[2]:end[2]
-            ] = vox_matrix
-
-
-
-            # Save each Z slice as a PNG
-            for z in range(resolution):
-                slice_img = (padded[:, :, z] * 255).astype(np.uint8)
-                img = Image.fromarray(slice_img, mode='L')
-                img.save(os.path.join(voxel_out_dir, f"slice_{z:03d}.png"))
-
-            print(f'✅ Saved {resolution} slices to {voxel_out_dir}')
+            except Exception as e:
+                print(f'❌ Skipping {filename} due to error: {e}')
+                continue
 
     print('🎉 All STL files processed and padded to fixed shape.')
-
-
-
 
 
 

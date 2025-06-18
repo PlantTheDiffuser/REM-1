@@ -12,7 +12,7 @@ from itertools import islice
 
 resolution = 150  # Number of slices/images per file
 convert = True   # Set to True if you need to convert STL files to PNG
-batch_size = 10  # Adjust batch size as needed
+batch_size = 20  # Adjust batch size as needed
 
 # Get current script directory
 current_dir = Path(__file__).resolve().parent
