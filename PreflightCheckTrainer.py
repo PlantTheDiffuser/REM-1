@@ -8,9 +8,11 @@ from PIL import Image
 from pathlib import Path
 import ConvertSTLtoVoxel as conv
 import shutil
+from itertools import islice
 
-resolution = 100  # Number of slices/images per file
+resolution = 150  # Number of slices/images per file
 convert = True   # Set to True if you need to convert STL files to PNG
+batch_size = 10  # Adjust batch size as needed
 
 # Get current script directory
 current_dir = Path(__file__).resolve().parent
@@ -54,7 +56,7 @@ transform = transforms.Compose([
 ])
 data_dir = str(current_dir / 'PreflightCheckTrainingData')
 dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 print(f"Classes found: {dataset.classes}")  # Should print ['CADmodel', 'MESHmodel']
 
@@ -90,7 +92,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 # ---------- Training Loop ----------
 
-num_epochs = 5
+num_epochs = 25
 for epoch in range(num_epochs):
     total_loss = 0
     correct = 0
@@ -126,9 +128,11 @@ def predict_image(image_path):
         _, pred = torch.max(output, 1)
         return dataset.classes[pred.item()]
 
-# Example prediction: goes through the CADmodel directory and tests images
-for img_path in Path(CADmodel).glob("*.png"):
+# Example prediction: goes through the CADmodel directory and tests 4 images
+print("Predicting on CADmodel images:")
+for img_path in islice(Path(CADmodel).glob("*.png"), 4):
     print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
-# Example prediction: goes through the MESHmodel directory and tests images
-for img_path in Path(MESHmodel).glob("*.png"):
+# Example prediction: goes through the MESHmodel directory and tests 4 images
+print("Predicting on MESHmodel images:")
+for img_path in islice(Path(MESHmodel).glob("*.png"), 4):
     print(f"Predicting for {img_path.name}: {predict_image(img_path)}")

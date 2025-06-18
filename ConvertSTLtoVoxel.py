@@ -1,22 +1,79 @@
-import stltovoxel
 import os
 from PIL import Image
 from pathlib import Path
+import trimesh
+import tempfile
+import stltovoxel
+import numpy as np
 
-def process_stl_files(input_dir, resolution):
+def process_stl_files(input_dir, resolution=100):
+    def normalize_stl(in_path):
+        mesh = trimesh.load(in_path)
+
+        # Scale mesh to fit into a cube of `resolution` units
+        scale_factor = resolution / mesh.extents.max()
+        mesh.apply_scale(scale_factor)
+
+        # Center the mesh around origin
+        mesh.apply_translation(-mesh.bounding_box.centroid)
+
+        return mesh
+
     for filename in os.listdir(input_dir):
-        if filename.endswith(".stl"):
-            stlFileIn = os.path.join(input_dir, filename)
-            voxelOutDir = os.path.join(input_dir, os.path.splitext(filename)[0])
-            try:
-                os.mkdir(voxelOutDir)
-            except FileExistsError:
-                pass
-            voxelOut = os.path.join(voxelOutDir, os.path.splitext(filename)[0] + '.png')
-            
-            # Pass the resolution to ensure 100 slices
-            stltovoxel.doExport(stlFileIn, voxelOut, resolution)
-    print('done voxel convertion')
+        if filename.lower().endswith(".stl"):
+            print(f'🔄 Processing STL file: {filename}')
+            stl_file_in = os.path.join(input_dir, filename)
+            base_name = os.path.splitext(filename)[0]
+            voxel_out_dir = os.path.join(input_dir, base_name)
+            os.makedirs(voxel_out_dir, exist_ok=True)
+
+            # Normalize mesh
+            normalized_mesh = normalize_stl(stl_file_in)
+
+            # Voxelize with pitch = 1 (1 unit = 1 voxel)
+            pitch = 1.0
+            vox = normalized_mesh.voxelized(pitch)
+            # Transpose from (Z, Y, X) → (X, Y, Z)
+            vox_matrix = np.transpose(vox.matrix.astype(np.uint8), (2, 1, 0))
+
+            # Init cube
+            padded = np.zeros((resolution, resolution, resolution), dtype=np.uint8)
+
+            # Compute safe offsets and crop ranges
+            for i in range(3):
+                if vox_matrix.shape[i] > resolution:
+                    # Crop the voxel matrix to fit the cube
+                    start_crop = (vox_matrix.shape[i] - resolution) // 2
+                    end_crop = start_crop + resolution
+                    vox_matrix = np.take(vox_matrix, indices=range(start_crop, end_crop), axis=i)
+
+            # Recompute shape-based offset
+            offset = [(resolution - s) // 2 for s in vox_matrix.shape]
+            end = [offset[i] + vox_matrix.shape[i] for i in range(3)]
+
+            # Assign cropped voxel matrix into the cube
+            padded[
+                offset[0]:end[0],
+                offset[1]:end[1],
+                offset[2]:end[2]
+            ] = vox_matrix
+
+
+
+            # Save each Z slice as a PNG
+            for z in range(resolution):
+                slice_img = (padded[:, :, z] * 255).astype(np.uint8)
+                img = Image.fromarray(slice_img, mode='L')
+                img.save(os.path.join(voxel_out_dir, f"slice_{z:03d}.png"))
+
+            print(f'✅ Saved {resolution} slices to {voxel_out_dir}')
+
+    print('🎉 All STL files processed and padded to fixed shape.')
+
+
+
+
+
 
 def stack_pngs_vertically(source_dir):
     for subdir in Path(source_dir).iterdir():
