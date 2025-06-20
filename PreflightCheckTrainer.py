@@ -12,22 +12,41 @@ from itertools import islice
 
 #Preprocessing
 resolution = 150    # Number of slices/images per file
-convert = False      # Set to True if you need to convert STL files to PNG
 
 #Training
-train = False       # Set to True if you want to train on the given data
+train = True       # Set to True if you want to train on the given data
 batch_size = 20     # Adjust batch size as needed
+learning_rate = 0.001  # Learning rate for the optimizer
 epochs = 5
+TrainConvert = False  # Set to True if you want to convert STL files to PNG images for training
 
 #Testing
-test = False
+test = True
+test_batch_size = 15  # Adjust batch size for testing if needed
+TestConvert = False  # Set to True if you want to convert STL files to PNG images for testing
+
 
 # Get current script directory
 current_dir = Path(__file__).resolve().parent
+
+# Define paths for CADmodel and MESHmodel(Training Data)
 CADmodel = str(current_dir / 'PreflightCheckTrainingData/CADmodel')
 MESHmodel = str(current_dir / 'PreflightCheckTrainingData/MESHmodel')
 
-if convert:
+# Define paths for CADmodel and MESHmodel(Test Data)
+CADmodel_test = str(current_dir / 'PreflightCheckTestData/CADmodel')
+MESHmodel_test = str(current_dir / 'PreflightCheckTestData/MESHmodel')
+
+
+def PreprocessSTL(CADmodel, MESHmodel, resolution=resolution):
+    """
+    Preprocess STL files by converting them to PNG images.
+    This function processes both CADmodel and MESHmodel directories.
+    """
+    # Ensure directories exist
+    Path(CADmodel).mkdir(parents=True, exist_ok=True)
+    Path(MESHmodel).mkdir(parents=True, exist_ok=True)
+
     # Process CADmodel and MESHmodel directories
     conv.process_stl_files(CADmodel, resolution)
     conv.process_stl_files(MESHmodel, resolution)
@@ -45,6 +64,16 @@ if convert:
             shutil.rmtree(subdir)
     print(f"Nuked: MESHmodel subdirectories")
 
+if TrainConvert:
+    print("Converting STL files to PNG images...")
+    PreprocessSTL()
+    print("Conversion complete.")
+
+if TestConvert:
+    print("Converting STL files to PNG images for testing...")
+    PreprocessSTL(CADmodel_test, MESHmodel_test, resolution)
+    print("Conversion complete.")
+    
 
 # ---------- Dataset Setup ----------
 class ResizeKeepAspect:
@@ -73,11 +102,11 @@ class SliceStackClassifier(nn.Module):
     def __init__(self):
         super(SliceStackClassifier, self).__init__()
         self.net = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(3, 8, kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
 
-            nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(8, 16, kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
 
@@ -97,7 +126,7 @@ if train:
     print(f"Using device: {device}")
     model = SliceStackClassifier().to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # ---------- Training Loop ----------
 
@@ -156,6 +185,10 @@ if test:
     model = SliceStackClassifier()
     model.load_state_dict(torch.load(current_dir / 'PreflightCheck.pth'))
     model.eval()  # Set to eval mode before inference
+    TestAccuracyCAD = 0.0
+    TestAccuracyMESH = 0.0
+    TestTotal = 0
+    TestCorrect = 0
 
     # Define your label names (same order as during training)
     class_names = ['CADmodel', 'MESHmodel']  # or dataset.classes if available
@@ -169,12 +202,30 @@ if test:
             _, pred = torch.max(outputs, 1)
             return class_names[pred.item()]
 
-
-
+    counter = 0
     print("Testing CAD models:")
-    for img_path in Path(CADmodel).glob("*.png"):
+    for img_path in Path(CADmodel_test).glob("*.png"):
         print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
-
+        if predict_image(img_path) == 'CADmodel':
+            TestCorrect += 1
+        TestTotal += 1
+        TestAccuracyCAD = (TestCorrect / TestTotal) * 100
+        counter += 1
+        if counter == test_batch_size:
+            break
+    counter = 0
+    TestTotal = 0
+    TestCorrect = 0
     print("Testing MESH models:")
-    for img_path in Path(MESHmodel).glob("*.png"):
-            print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
+    for img_path in Path(MESHmodel_test).glob("*.png"):
+        print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
+        if predict_image(img_path) == 'MESHmodel':
+            TestCorrect += 1
+        TestTotal += 1
+        TestAccuracyMESH = (TestCorrect / TestTotal) * 100
+        counter += 1
+        if counter == test_batch_size:
+            break
+    
+    print(f"Test Accuracy for CADmodel: {TestAccuracyCAD:.2f}%")
+    print(f"Test Accuracy for MESHmodel: {TestAccuracyMESH:.2f}%")

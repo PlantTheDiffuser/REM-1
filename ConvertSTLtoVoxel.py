@@ -11,7 +11,7 @@ def process_stl_files(input_dir, resolution=100):
         mesh = trimesh.load(in_path)
 
         # Skip files with too many triangles
-        if mesh.faces.shape[0] > 1_000_000:
+        if mesh.faces.shape[0] > 3_000_000:
             raise ValueError(f"Mesh too complex: {mesh.faces.shape[0]} faces")
 
         # Scale mesh to fit into a cube of `resolution` units
