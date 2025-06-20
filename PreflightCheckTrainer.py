@@ -10,9 +10,17 @@ import ConvertSTLtoVoxel as conv
 import shutil
 from itertools import islice
 
-resolution = 150  # Number of slices/images per file
-convert = True   # Set to True if you need to convert STL files to PNG
-batch_size = 20  # Adjust batch size as needed
+#Preprocessing
+resolution = 150    # Number of slices/images per file
+convert = False      # Set to True if you need to convert STL files to PNG
+
+#Training
+train = False       # Set to True if you want to train on the given data
+batch_size = 20     # Adjust batch size as needed
+epochs = 5
+
+#Testing
+test = False
 
 # Get current script directory
 current_dir = Path(__file__).resolve().parent
@@ -82,57 +90,91 @@ class SliceStackClassifier(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-# ---------- Training Setup ----------
+if train:
+    # ---------- Training Setup ----------
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-model = SliceStackClassifier().to(device)
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    model = SliceStackClassifier().to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# ---------- Training Loop ----------
+    # ---------- Training Loop ----------
 
-num_epochs = 25
-for epoch in range(num_epochs):
-    total_loss = 0
-    correct = 0
-    total = 0
-    print(f"Starting epoch {epoch+1}/{num_epochs}")
-    model.train()
-    for images, labels in dataloader:
-        images, labels = images.to(device), labels.to(device)
+    num_epochs = epochs
+    for epoch in range(num_epochs):
+        total_loss = 0
+        correct = 0
+        total = 0
+        print(f"Starting epoch {epoch+1}/{num_epochs}")
+        model.train()
+        for images, labels in dataloader:
+            images, labels = images.to(device), labels.to(device)
 
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+            optimizer.zero_grad()
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-        total_loss += loss.item()
-        _, predicted = torch.max(outputs, 1)
-        correct += (predicted == labels).sum().item()
-        total += labels.size(0)
-        print(f"Batch Loss: {loss.item():.4f} - Correct: {correct}/{total}", end='\r')
+            total_loss += loss.item()
+            _, predicted = torch.max(outputs, 1)
+            correct += (predicted == labels).sum().item()
+            total += labels.size(0)
+            print(f"Batch Loss: {loss.item():.4f} - Correct: {correct}/{total}", end='\r')
 
-    acc = 100 * correct / total
-    print(f"Epoch {epoch+1}/{num_epochs} - Loss: {total_loss:.4f} - Accuracy: {acc:.2f}%")
+        acc = 100 * correct / total
+        print(f"Epoch {epoch+1}/{num_epochs} - Loss: {total_loss:.4f} - Accuracy: {acc:.2f}%")
 
-# ---------- Prediction Example ----------
-print("Training complete. Testing model...")
-def predict_image(image_path):
-    image = Image.open(image_path).convert("RGB")
-    image = transform(image).unsqueeze(0).to(device)
-    model.eval()
-    with torch.no_grad():
-        output = model(image)
-        _, pred = torch.max(output, 1)
-        return dataset.classes[pred.item()]
+    # ---------- Save Model ------------------
+    print('Saving model.....')
+    torch.save(model.state_dict(), current_dir / 'PreflightCheck.pth')
+    print(f"Saved to: {current_dir / 'PreflightCheck.pth'}")
 
-# Example prediction: goes through the CADmodel directory and tests 4 images
-print("Predicting on CADmodel images:")
-for img_path in islice(Path(CADmodel).glob("*.png"), 4):
-    print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
-# Example prediction: goes through the MESHmodel directory and tests 4 images
-print("Predicting on MESHmodel images:")
-for img_path in islice(Path(MESHmodel).glob("*.png"), 4):
-    print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
+    # ---------- Prediction Example ----------
+    print("Training complete. Testing model...")
+    def predict_image(image_path):
+        image = Image.open(image_path).convert("RGB")
+        image = transform(image).unsqueeze(0).to(device)
+        model.eval()
+        with torch.no_grad():
+            output = model(image)
+            _, pred = torch.max(output, 1)
+            return dataset.classes[pred.item()]
+
+    # Example prediction: goes through the CADmodel directory and tests 4 images
+    print("Predicting on CADmodel images:")
+    for img_path in islice(Path(CADmodel).glob("*.png"), 4):
+        print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
+    # Example prediction: goes through the MESHmodel directory and tests 4 images
+    print("Predicting on MESHmodel images:")
+    for img_path in islice(Path(MESHmodel).glob("*.png"), 4):
+        print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
+
+
+if test:
+    model = SliceStackClassifier()
+    model.load_state_dict(torch.load(current_dir / 'PreflightCheck.pth'))
+    model.eval()  # Set to eval mode before inference
+
+    # Define your label names (same order as during training)
+    class_names = ['CADmodel', 'MESHmodel']  # or dataset.classes if available
+
+    # Prediction function
+    def predict_image(image_path):
+        image = Image.open(image_path).convert("RGB")
+        image = transform(image).unsqueeze(0)  # Add batch dimension
+        with torch.no_grad():
+            outputs = model(image)
+            _, pred = torch.max(outputs, 1)
+            return class_names[pred.item()]
+
+
+
+    print("Testing CAD models:")
+    for img_path in Path(CADmodel).glob("*.png"):
+        print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
+
+    print("Testing MESH models:")
+    for img_path in Path(MESHmodel).glob("*.png"):
+            print(f"Predicting for {img_path.name}: {predict_image(img_path)}")
