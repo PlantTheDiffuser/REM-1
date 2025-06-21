@@ -23,7 +23,7 @@ TrainConvert = False  # Set to True if you want to convert STL files to PNG imag
 #Testing
 test = True
 test_batch_size = 15  # Adjust batch size for testing if needed
-TestConvert = False  # Set to True if you want to convert STL files to PNG images for testing
+TestConvert = True  # Set to True if you want to convert STL files to PNG images for testing
 
 
 # Get current script directory
@@ -102,11 +102,11 @@ class SliceStackClassifier(nn.Module):
     def __init__(self):
         super(SliceStackClassifier, self).__init__()
         self.net = nn.Sequential(
-            nn.Conv2d(3, 8, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(3, 16, kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
 
-            nn.Conv2d(8, 16, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
 
