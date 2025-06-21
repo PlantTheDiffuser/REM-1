@@ -2,8 +2,6 @@ import os
 from PIL import Image
 from pathlib import Path
 import trimesh
-import tempfile
-import stltovoxel
 import numpy as np
 
 def process_stl_files(input_dir, resolution=100):

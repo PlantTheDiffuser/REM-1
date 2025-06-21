@@ -14,14 +14,14 @@ from itertools import islice
 resolution = 150    # Number of slices/images per file
 
 #Training
-train = True       # Set to True if you want to train on the given data
+train = False       # Set to True if you want to train on the given data
 batch_size = 20     # Adjust batch size as needed
 learning_rate = 0.001  # Learning rate for the optimizer
 epochs = 5
-TrainConvert = False  # Set to True if you want to convert STL files to PNG images for training
+TrainConvert = True  # Set to True if you want to convert STL files to PNG images for training
 
 #Testing
-test = True
+test = False
 test_batch_size = 15  # Adjust batch size for testing if needed
 TestConvert = True  # Set to True if you want to convert STL files to PNG images for testing
 
