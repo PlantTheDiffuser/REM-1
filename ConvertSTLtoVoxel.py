@@ -9,7 +9,7 @@ def process_stl_files(input_dir, resolution=100):
         mesh = trimesh.load(in_path)
 
         # Skip files with too many triangles
-        if mesh.faces.shape[0] > 3_000_000:
+        if mesh.faces.shape[0] > 2_000_000:
             raise ValueError(f"Mesh too complex: {mesh.faces.shape[0]} faces")
 
         # Scale mesh to fit into a cube of `resolution` units
@@ -33,8 +33,28 @@ def process_stl_files(input_dir, resolution=100):
                 # Normalize and voxelize
                 normalized_mesh = normalize_stl(stl_file_in)
                 pitch = 1.0
-                vox = normalized_mesh.voxelized(pitch)
-                vox_matrix = np.transpose(vox.matrix.astype(np.uint8), (2, 1, 0))
+
+                try:
+                    # Normalize and prepare
+                    normalized_mesh = normalize_stl(stl_file_in)
+                    pitch = 1.0
+
+                    # ➕ INSERT THIS BLOCK HERE
+                    dims = normalized_mesh.extents / pitch
+                    vox_shape = tuple(np.ceil(dims).astype(int))
+                    estimated_MB = (np.prod(vox_shape) * 1) / (1024 ** 2)
+
+                    if estimated_MB > 500:
+                        print(f"❌ Skipping {filename}: estimated voxel grid too large ({estimated_MB:.1f} MB)")
+                        continue
+
+                    # Only voxelize if it's safe
+                    vox = normalized_mesh.voxelized(pitch)
+                    vox_matrix = np.transpose(vox.matrix.astype(np.uint8), (2, 1, 0))
+                    
+                except Exception as e:
+                    print(f'❌ Skipping {filename} due to error: {e}')
+                    continue
 
                 # Pad to cube
                 padded = np.zeros((resolution, resolution, resolution), dtype=np.uint8)

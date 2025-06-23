@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-import os
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, models, datasets
+from torch.utils.data import DataLoader
+from torchvision import transforms, datasets
 from PIL import Image
 from pathlib import Path
 import ConvertSTLtoVoxel as conv
@@ -11,19 +10,19 @@ import shutil
 from itertools import islice
 
 #Preprocessing
-resolution = 150    # Number of slices/images per file
+resolution = 150        # Number of slices/images per file
 
 #Training
-train = False       # Set to True if you want to train on the given data
-batch_size = 20     # Adjust batch size as needed
-learning_rate = 0.001  # Learning rate for the optimizer
-epochs = 5
-TrainConvert = True  # Set to True if you want to convert STL files to PNG images for training
+train = True           # Set to True if you want to train on the given data
+batch_size = 60         # Adjust batch size as needed
+learning_rate = 0.002   # Learning rate for the optimizer
+epochs = 5              # Number of epochs for training
+TrainConvert = False    # Set to True if you want to convert STL files to PNG images for training
 
 #Testing
-test = False
-test_batch_size = 15  # Adjust batch size for testing if needed
-TestConvert = True  # Set to True if you want to convert STL files to PNG images for testing
+test = False            # Set to True if you want to test the trained model
+test_batch_size = 15    # Adjust batch size for testing if needed
+TestConvert = True      # Set to True if you want to convert STL files to PNG images for testing
 
 
 # Get current script directory
