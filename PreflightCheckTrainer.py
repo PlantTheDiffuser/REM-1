@@ -16,13 +16,13 @@ resolution = 150        # Number of slices/images per file
 train = True           # Set to True if you want to train on the given data
 batch_size = 60         # Adjust batch size as needed
 learning_rate = 0.002   # Learning rate for the optimizer
-epochs = 5              # Number of epochs for training
+epochs = 10              # Number of epochs for training
 TrainConvert = False    # Set to True if you want to convert STL files to PNG images for training
 
 #Testing
-test = False            # Set to True if you want to test the trained model
+test = True            # Set to True if you want to test the trained model
 test_batch_size = 15    # Adjust batch size for testing if needed
-TestConvert = True      # Set to True if you want to convert STL files to PNG images for testing
+TestConvert = False      # Set to True if you want to convert STL files to PNG images for testing
 
 
 # Get current script directory
@@ -65,7 +65,7 @@ def PreprocessSTL(CADmodel, MESHmodel, resolution=resolution):
 
 if TrainConvert:
     print("Converting STL files to PNG images...")
-    PreprocessSTL()
+    PreprocessSTL(CADmodel, MESHmodel, resolution)
     print("Conversion complete.")
 
 if TestConvert:
@@ -85,11 +85,13 @@ class ResizeKeepAspect:
         return img.resize((self.target_width, new_height), Image.BILINEAR)
 
 transform = transforms.Compose([
-    ResizeKeepAspect(256),                     # Preserve aspect ratio, fix width
-    transforms.CenterCrop((1024, 256)),        # Crop to common height (adjust if needed)
+    ResizeKeepAspect(256),                     # Keeps aspect ratio, resizes width
+    transforms.CenterCrop((1024, 256)),        # Crop to (H=1024, W=256)
+    transforms.Grayscale(num_output_channels=1),  # <-- Convert to grayscale explicitly
     transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))       # Normalize grayscale/RGB
+    transforms.Normalize((0.5,), (0.5,))       # Normalize for 1-channel input
 ])
+
 data_dir = str(current_dir / 'PreflightCheckTrainingData')
 dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
@@ -100,23 +102,31 @@ print(f"Classes found: {dataset.classes}")  # Should print ['CADmodel', 'MESHmod
 class SliceStackClassifier(nn.Module):
     def __init__(self):
         super(SliceStackClassifier, self).__init__()
-        self.net = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=5, stride=1, padding=2),
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=5, stride=2, padding=2),  # (32, 75, 11250)
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
+            nn.MaxPool2d(2),                                        # (32, 37, 5625)
 
-            nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1), # (64, 19, 2813)
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
+            nn.MaxPool2d(2),                                        # (64, 9, 1406)
 
-            nn.Flatten(),
-            nn.LazyLinear(128),  # Infer input dim automatically
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),# (128, 5, 703)
             nn.ReLU(),
-            nn.Linear(128, 2)
+
+            nn.AdaptiveAvgPool2d((1, 1))                            # (128, 1, 1)
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),            # (128)
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 2)
         )
 
     def forward(self, x):
-        return self.net(x)
+        x = self.features(x)
+        return self.classifier(x)
 
 if train:
     # ---------- Training Setup ----------
