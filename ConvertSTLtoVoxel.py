@@ -39,7 +39,6 @@ def process_stl_files(input_dir, resolution=100):
                     normalized_mesh = normalize_stl(stl_file_in)
                     pitch = 1.0
 
-                    # ➕ INSERT THIS BLOCK HERE
                     dims = normalized_mesh.extents / pitch
                     vox_shape = tuple(np.ceil(dims).astype(int))
                     estimated_MB = (np.prod(vox_shape) * 1) / (1024 ** 2)
