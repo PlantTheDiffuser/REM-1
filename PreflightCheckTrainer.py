@@ -17,6 +17,7 @@ train = True           # Set to True if you want to train on the given data
 batch_size = 60         # Adjust batch size as needed
 learning_rate = 0.002   # Learning rate for the optimizer
 epochs = 10              # Number of epochs for training
+acc_cuttoff = 97.0        # Once the model reaches this accuracy, training stops
 TrainConvert = False    # Set to True if you want to convert STL files to PNG images for training
 
 #Testing
@@ -163,6 +164,9 @@ if train:
 
         acc = 100 * correct / total
         print(f"Epoch {epoch+1}/{num_epochs} - Loss: {total_loss:.4f} - Accuracy: {acc:.2f}%")
+        if acc >= acc_cuttoff:
+            print(f"Early stopping at epoch {epoch+1} with accuracy {acc:.2f}%")
+            break
 
     # ---------- Save Model ------------------
     print('Saving model.....')
