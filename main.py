@@ -1,3 +1,9 @@
+import os
+from pathlib import Path
 import PreflightCheckTrainer
 
-PreflightCheckTrainer.train()
+current_dir = Path(__file__).resolve().parent
+inputImage = str(current_dir / 'Umbral_Revenant_Miniature.png')
+
+output = PreflightCheckTrainer.predict_image(inputImage)
+print("Output:", output)
