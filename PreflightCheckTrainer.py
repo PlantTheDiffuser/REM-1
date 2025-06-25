@@ -8,10 +8,7 @@ from pathlib import Path
 import ConvertSTLtoVoxel as conv
 import shutil
 from itertools import islice
-# Suppress UserWarnings from torchvision
 import warnings
-warnings.filterwarnings("ignore", category=UserWarning)
-
 
 #Preprocessing
 resolution = 150        # Number of slices/images per file
@@ -83,20 +80,20 @@ class SliceStackClassifier(nn.Module):
         x = self.features(x)
         return self.classifier(x)
 
-# Print startup message based on condition of train, test, TrainConvert, TestConvert, and resume_training
-print("Starting PreflightCheck Trainer. Behavior based on specified conditions are as follows:")
-if (TrainConvert):
-    print("Converting STL files to PNG images in 'PreflightCheckTrainingData' folder")
-if (TestConvert):
-    print("Converting STL files to PNG images in 'PreflightCheckTestData' folder")
-if (train):
-    print("Training the model and saving to 'PreflightCheck.pth'")
-if (resume_training):
-    print("Resuming training from 'PreflightCheckCheckpoint.pth'")
-if (test):
-    print("Testing the model 'PreflightCheck.pth' against data inside 'PreflightCheckTestData' folder")
-
-print("\n\n")
+def main():
+    # Print startup message based on condition of train, test, TrainConvert, TestConvert, and resume_training
+    print("Starting PreflightCheck Trainer. Behavior based on specified conditions are as follows:")
+    if (TrainConvert):
+        print("Converting STL files to PNG images in 'PreflightCheckTrainingData' folder")
+    if (TestConvert):
+        print("Converting STL files to PNG images in 'PreflightCheckTestData' folder")
+    if (train):
+        print("Training the model and saving to 'PreflightCheck.pth'")
+    if (resume_training):
+        print("Resuming training from 'PreflightCheckCheckpoint.pth'")
+    if (test):
+        print("Testing the model 'PreflightCheck.pth' against data inside 'PreflightCheckTestData' folder")
+    print("\n\n")
 
 # Get current script directory
 current_dir = Path(__file__).resolve().parent
@@ -148,7 +145,10 @@ def load_model(model_path=None, device=None):
     if model_path is None:
         model_path = Path(__file__).resolve().parent / "PreflightCheck.pth"
 
-    checkpoint = torch.load(model_path, map_location=device)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=FutureWarning)
+        checkpoint = torch.load(model_path, map_location=device)
+
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     return model, device
@@ -167,7 +167,7 @@ data_dir = str(current_dir / 'PreflightCheckTrainingData')
 dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-print(f"Classes found: {dataset.classes}")  # Should print ['CADmodel', 'MESHmodel']
+#print(f"Classes found: {dataset.classes}")  # Should print ['CADmodel', 'MESHmodel']
 
 # ---------- Model Definition ----------
 
