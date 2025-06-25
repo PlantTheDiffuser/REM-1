@@ -14,9 +14,11 @@ resolution = 150        # Number of slices/images per file
 
 #Training
 train = True           # Set to True if you want to train on the given data
+resume_training = True  # Set to True to continue from checkpoint           '''[Make sure to rename the checkpoint file to PreflightCheckCheckpoint.pth]'''
+
 batch_size = 60         # Adjust batch size as needed
 learning_rate = 0.002   # Learning rate for the optimizer
-epochs = 10              # Number of epochs for training
+epochs = 8              # Number of epochs for training | If starting from a checkpoint, this will be added to the current epoch count
 acc_cuttoff = 97.0        # Once the model reaches this accuracy, training stops
 TrainConvert = False    # Set to True if you want to convert STL files to PNG images for training
 
@@ -25,6 +27,20 @@ test = True            # Set to True if you want to test the trained model
 test_batch_size = 15    # Adjust batch size for testing if needed
 TestConvert = False      # Set to True if you want to convert STL files to PNG images for testing
 
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Print startup message based on condition of train, test, TrainConvert, TestConvert, and resume_training
+print("Starting PreflightCheck Trainer. Behavior based on specified conditions are as follows:")
+if (TrainConvert):
+    print("Converting STL files to PNG images in 'PreflightCheckTrainingData' folder")
+if (TestConvert):
+    print("Converting STL files to PNG images in 'PreflightCheckTestData' folder")
+if (train):
+    print("Training the model and saving to 'PreflightCheck.pth'")
+if (resume_training):
+    print("Resuming training from 'PreflightCheckCheckpoint.pth'")
+if (test):
+    print("Testing the model 'PreflightCheck.pth' against data inside 'PreflightCheckTestData' folder")
 
 # Get current script directory
 current_dir = Path(__file__).resolve().parent
@@ -73,7 +89,9 @@ if TestConvert:
     print("Converting STL files to PNG images for testing...")
     PreprocessSTL(CADmodel_test, MESHmodel_test, resolution)
     print("Conversion complete.")
-    
+
+
+
 
 # ---------- Dataset Setup ----------
 class ResizeKeepAspect:
@@ -138,10 +156,24 @@ if train:
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
+    start_epoch = 0  # Default to 0 unless resuming
+    if resume_training:
+        checkpoint_path = current_dir / 'PreflightCheckCheckpoint.pth'
+        if checkpoint_path.exists():
+            print("🔁 Resuming training from checkpoint...")
+            checkpoint = torch.load(checkpoint_path)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            start_epoch = checkpoint['epoch']
+            print(f"✅ Resumed from epoch {start_epoch}")
+        else:
+            print("⚠️ Expected checkpoint model but was not found — starting fresh.")
+
+
     # ---------- Training Loop ----------
 
-    num_epochs = epochs
-    for epoch in range(num_epochs):
+    num_epochs = start_epoch + epochs
+    for epoch in range(start_epoch, num_epochs):
         total_loss = 0
         correct = 0
         total = 0
@@ -169,8 +201,14 @@ if train:
             break
 
     # ---------- Save Model ------------------
+    print("Training complete at epoch", num_epochs)
     print('Saving model.....')
-    torch.save(model.state_dict(), current_dir / 'PreflightCheck.pth')
+    torch.save({
+        'epoch': epoch + 1,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict()
+    }, current_dir / 'PreflightCheck.pth')
+
     print(f"Saved to: {current_dir / 'PreflightCheck.pth'}")
 
     # ---------- Prediction Example ----------
