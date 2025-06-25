@@ -3,6 +3,7 @@ from PIL import Image
 from pathlib import Path
 import trimesh
 import numpy as np
+import shutil
 
 def process_stl_files(input_dir, resolution=100):
     def normalize_stl(in_path):
@@ -107,3 +108,63 @@ def stack_pngs_vertically(source_dir):
             stacked_img.save(output_path)
             print(f"Saved: {output_path}")
     print('done stacking PNGs vertically')
+
+def PreprocessSTL(CADmodel, MESHmodel, resolution=100):
+    """
+    Preprocess STL files by converting them to PNG images.
+    This function processes both CADmodel and MESHmodel directories.
+    """
+    # Ensure directories exist
+    Path(CADmodel).mkdir(parents=True, exist_ok=True)
+    Path(MESHmodel).mkdir(parents=True, exist_ok=True)
+
+    # Process CADmodel and MESHmodel directories
+    process_stl_files(CADmodel, resolution)
+    process_stl_files(MESHmodel, resolution)
+
+    stack_pngs_vertically(CADmodel)
+    stack_pngs_vertically(MESHmodel)
+
+    # Delete subdirectories insdie both CADmodel and MESHmodel and all data inside them.
+    for subdir in Path(CADmodel).iterdir():
+        if subdir.is_dir():
+            shutil.rmtree(subdir)
+    print(f"Nuked: CADmodel subdirectories")
+    for subdir in Path(MESHmodel).iterdir():
+        if subdir.is_dir():
+            shutil.rmtree(subdir)
+    print(f"Nuked: MESHmodel subdirectories")
+
+def PreprocessSingleFile(input_file, resolution=100):
+    """
+    Converts a single STL file into a vertically stacked PNG image.
+    Output image is saved in the same directory as the STL file,
+    named the same but with a .png extension.
+    """
+    input_file = Path(input_file)
+    assert input_file.exists() and input_file.suffix.lower() == ".stl", "Input must be an existing .stl file"
+
+    output_dir = input_file.parent
+    base_name = input_file.stem  # filename without extension
+
+    # Create a temporary working directory
+    temp_dir = output_dir / f"{base_name}_temp"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy the STL file into the temp directory so process_stl_files picks it up
+    temp_stl = temp_dir / input_file.name
+    shutil.copy(str(input_file), str(temp_stl))
+
+    # Process and stack
+    process_stl_files(str(temp_dir), resolution)
+    stack_pngs_vertically(str(temp_dir))
+
+    # Move the final stacked image to the original folder
+    for img in temp_dir.glob("*.png"):
+        target_path = output_dir / f"{base_name}.png"
+        shutil.move(str(img), str(target_path))
+        #print(f"✅ Saved: {target_path}")
+
+    # Clean up
+    shutil.rmtree(temp_dir)
+    #print(f"🧹 Cleaned temp: {temp_dir}")

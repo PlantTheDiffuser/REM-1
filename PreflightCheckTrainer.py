@@ -6,7 +6,6 @@ from torchvision import transforms, datasets
 from PIL import Image
 from pathlib import Path
 import ConvertSTLtoVoxel as conv
-import shutil
 from itertools import islice
 import warnings
 
@@ -107,31 +106,7 @@ CADmodel_test = str(current_dir / 'PreflightCheckTestData/CADmodel')
 MESHmodel_test = str(current_dir / 'PreflightCheckTestData/MESHmodel')
 
 
-def PreprocessSTL(CADmodel, MESHmodel, resolution=resolution):
-    """
-    Preprocess STL files by converting them to PNG images.
-    This function processes both CADmodel and MESHmodel directories.
-    """
-    # Ensure directories exist
-    Path(CADmodel).mkdir(parents=True, exist_ok=True)
-    Path(MESHmodel).mkdir(parents=True, exist_ok=True)
 
-    # Process CADmodel and MESHmodel directories
-    conv.process_stl_files(CADmodel, resolution)
-    conv.process_stl_files(MESHmodel, resolution)
-
-    conv.stack_pngs_vertically(CADmodel)
-    conv.stack_pngs_vertically(MESHmodel)
-
-    # Delete subdirectories insdie both CADmodel and MESHmodel and all data inside them.
-    for subdir in Path(CADmodel).iterdir():
-        if subdir.is_dir():
-            shutil.rmtree(subdir)
-    print(f"Nuked: CADmodel subdirectories")
-    for subdir in Path(MESHmodel).iterdir():
-        if subdir.is_dir():
-            shutil.rmtree(subdir)
-    print(f"Nuked: MESHmodel subdirectories")
 
 def load_model(model_path=None, device=None):
     """
@@ -175,12 +150,12 @@ dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 if __name__ == "__main__":
     if TrainConvert:
         print("Converting STL files to PNG images...")
-        PreprocessSTL(CADmodel, MESHmodel, resolution)
+        conv.PreprocessSTL(CADmodel, MESHmodel, resolution)
         print("Conversion complete.")
 
     if TestConvert:
         print("Converting STL files to PNG images for testing...")
-        PreprocessSTL(CADmodel_test, MESHmodel_test, resolution)
+        conv.PreprocessSTL(CADmodel_test, MESHmodel_test, resolution)
         print("Conversion complete.")
     if train:
     # ---------- Training Setup ----------
