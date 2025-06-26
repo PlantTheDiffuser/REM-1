@@ -3,10 +3,14 @@ from pathlib import Path
 import ConvertSTLtoVoxel as conv
 import PreflightCheckTrainer
 
-inputfile = 'model-4.STL'
+inputfile = 'model.STL'
 current_dir = Path(__file__).resolve().parent
 
 def RunPreflightCheck(inputfile):
+    input_path = current_dir / inputfile
+    if not input_path.exists():
+        print(f"❌ Error: '{inputfile}' does not exist.")
+        return None
     inputfilename = inputfile.split('.')[0]
     input = str(current_dir / inputfile)
     conv.PreprocessSingleFile(input, resolution=150)
@@ -23,4 +27,4 @@ def RunPreflightCheck(inputfile):
     return output
 
 out = RunPreflightCheck(inputfile)
-print(out)
+
