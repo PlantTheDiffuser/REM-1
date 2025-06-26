@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import ConvertSTLtoVoxel as conv
 import PreflightCheckTrainer
@@ -28,3 +27,7 @@ def RunPreflightCheck(inputfile):
 
 out = RunPreflightCheck(inputfile)
 
+if out == 'CADmodel':
+    print("The output is a CAD model.")
+elif out == 'MESHmodel':
+    print("This file cannot be reverse engineered into a CAD model.")
