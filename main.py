@@ -1,8 +1,9 @@
 from pathlib import Path
 import ConvertSTLtoVoxel as conv
-import PreflightCheckTrainer
+import PreflightCheckTrainer as PreflightCheck
+import ReverseEngineeringModel as REM
 
-inputfile = 'model.STL'
+inputfile = 'test.STL'
 current_dir = Path(__file__).resolve().parent
 
 def RunPreflightCheck(inputfile):
@@ -15,7 +16,7 @@ def RunPreflightCheck(inputfile):
     conv.PreprocessSingleFile(input, resolution=150)
     input = inputfilename + '.png'
     input = str(current_dir / input)
-    output = PreflightCheckTrainer.predict_image(input)
+    output = PreflightCheck.predict_image(input)
     #print("Output:", output)
 
     # Clean up temporary files
@@ -24,6 +25,9 @@ def RunPreflightCheck(inputfile):
         input.unlink()
         #print(f"🧹 Cleaned up temporary file: {input}")
     return output
+
+def RunReverseEngineeringModel(inputfile):
+    REM.predict_feature()
 
 out = RunPreflightCheck(inputfile)
 

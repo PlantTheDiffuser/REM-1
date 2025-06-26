@@ -274,10 +274,3 @@ if __name__ == "__main__":
         
         print(f"Test Accuracy for CADmodel: {TestAccuracyCAD:.2f}%")
         print(f"Test Accuracy for MESHmodel: {TestAccuracyMESH:.2f}%")
-
-
-
-
-
-
-
