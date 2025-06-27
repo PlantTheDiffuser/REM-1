@@ -33,5 +33,6 @@ out = RunPreflightCheck(inputfile)
 
 if out == 'CADmodel':
     print("The output is a CAD model.")
+    RunPreflightCheck(inputfile)
 elif out == 'MESHmodel':
     print("This file cannot be reverse engineered into a CAD model.")

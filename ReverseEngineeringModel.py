@@ -6,3 +6,6 @@ from torchvision import transforms, datasets
 
 def predict_feature():
     return None
+
+resolution = 150
+
