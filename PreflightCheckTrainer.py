@@ -17,9 +17,9 @@ train = True           # Set to True if you want to train on the given data
 resume_training = True  # Set to True to continue from checkpoint           '''[Make sure to rename the checkpoint file to PreflightCheckCheckpoint.pth]'''
 
 batch_size = 60         # Adjust batch size as needed
-learning_rate = 0.002   # Learning rate for the optimizer
-epochs = 40              # Number of epochs for training | If starting from a checkpoint, this will be added to the current epoch count
-acc_cuttoff = 97.0        # Once the model reaches this accuracy, training stops
+learning_rate = 0.001   # Learning rate for the optimizer
+epochs = 16              # Number of epochs for training | If starting from a checkpoint, this will be added to the current epoch count
+acc_cutoff = 101        # Once the model reaches this accuracy, training stops
 TrainConvert = False    # Set to True if you want to convert STL files to PNG images for training
 
 #Testing
@@ -206,7 +206,7 @@ if __name__ == "__main__":
 
             acc = 100 * correct / total
             print(f"Epoch {epoch+1}/{num_epochs} - Loss: {total_loss:.4f} - Accuracy: {acc:.2f}%")
-            if acc >= acc_cuttoff:
+            if acc >= acc_cutoff:
                 print(f"Early stopping at epoch {epoch+1} with accuracy {acc:.2f}%")
                 break
 
