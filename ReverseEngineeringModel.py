@@ -5,15 +5,30 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, datasets
 import torch.nn.functional as F
 
-max_steps = 10
 
-def predict_feature():
+''' Feature list:
+BossExtrude
+RevolveBoss
+RevolveCut
+CutExtrude
+
+'''
+
+
+def predict_feature() -> str:
     return None
-
 
 resolution = 150
 
-def ReverseEngineer():
+def ReverseEngineer(img_path):
+    # Upper limit for the number of steps to predict features
+    max_steps = 10
+    featureList = [img_path]
     for i in range(max_steps):
-        predict_feature()
+        featureList.append(predict_feature())
+    
+    return featureList
+    
+
+    
     

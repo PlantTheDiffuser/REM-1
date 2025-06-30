@@ -27,7 +27,7 @@ def RunPreflightCheck(inputfile):
     return output
 
 def RunReverseEngineeringModel(inputfile):
-    REM.predict_feature()
+    REM.ReverseEngineer()
 
 out = RunPreflightCheck(FileToRun)
 
