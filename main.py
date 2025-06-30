@@ -3,7 +3,7 @@ import ConvertSTLtoVoxel as conv
 import PreflightCheckTrainer as PreflightCheck
 import ReverseEngineeringModel as REM
 
-inputfile = 'test.STL'
+FileToRun = 'test.STL'
 current_dir = Path(__file__).resolve().parent
 
 def RunPreflightCheck(inputfile):
@@ -29,10 +29,11 @@ def RunPreflightCheck(inputfile):
 def RunReverseEngineeringModel(inputfile):
     REM.predict_feature()
 
-out = RunPreflightCheck(inputfile)
+out = RunPreflightCheck(FileToRun)
 
 if out == 'CADmodel':
     print("The output is a CAD model.")
-    RunPreflightCheck(inputfile)
+    RunReverseEngineeringModel(FileToRun)
+
 elif out == 'MESHmodel':
     print("This file cannot be reverse engineered into a CAD model.")

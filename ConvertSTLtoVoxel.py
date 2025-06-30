@@ -106,7 +106,7 @@ def stack_pngs_vertically(source_dir):
             # Save stacked image in parent folder with folder name
             output_path = subdir.parent / f"{subdir.name}.png"
             stacked_img.save(output_path)
-            print(f"Saved: {output_path}")
+            #print(f"Saved: {output_path}")
     print('done stacking PNGs vertically')
 
 def PreprocessSTL(CADmodel, MESHmodel, resolution=100):
