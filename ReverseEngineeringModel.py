@@ -16,15 +16,15 @@ resolution = 150
 # Training
 train = True
 resume_training = True
-epochs = 20
+epochs = 2
 acc_cutoff = 98
-TrainConvert = True
+TrainConvert = False
 batch_size = 32
 learning_rate = 0.0005
 
 # Testing
-test = True
-TestConvert = True
+test = False
+TestConvert = False
 test_batch_size = 20
 
 # Current directory
@@ -137,12 +137,14 @@ def train_model():
     criterion = nn.CrossEntropyLoss()
 
     start_epoch = 0
-    if resume_training and Path("FeatureClassifierCheckpoint.pth").exists():
-        checkpoint = torch.load("FeatureClassifierCheckpoint.pth")
+    if resume_training and (current_dir / "FeatureClassifierCheckpoint.pth").exists():
+        checkpoint = torch.load(current_dir / "FeatureClassifierCheckpoint.pth")
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         start_epoch = checkpoint["epoch"]
         print(f"✅ Resumed training from epoch {start_epoch}")
+
+    epoch = start_epoch - 1  # in case the loop doesn't run
 
     for epoch in range(start_epoch, start_epoch + epochs):
         model.train()
@@ -163,18 +165,21 @@ def train_model():
             correct += (preds == y).sum().item()
             total += y.size(0)
 
-        acc = 100 * correct / total
+        acc = 100 * correct / total if total > 0 else 0.0
         print(f"Epoch {epoch+1} - Loss: {total_loss:.4f} - Accuracy: {acc:.2f}%")
 
         if acc >= acc_cutoff:
-            print("🎯 Accuracy cutoff reached.")
+            print(f"🎯 Accuracy cutoff ({acc_cutoff}%) reached at epoch {epoch+1}")
             break
 
+    final_epoch = epoch + 1
+    save_path = current_dir / "FeatureClassifier.pth"
     torch.save({
-        "epoch": epoch + 1,
+        "epoch": final_epoch,
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": optimizer.state_dict()
-    }, "FeatureClassifierModel.pth")
+    }, save_path)
+    print(f"✅ Model saved to {save_path}")
 
 # -------------------- Testing --------------------
 def test_model():
@@ -187,7 +192,7 @@ def test_model():
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        checkpoint = torch.load("FeatureClassifierModel.pth", map_location=device)
+        checkpoint = torch.load("FeatureClassifier.pth", map_location=device)
         model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
 
