@@ -6,6 +6,8 @@ import ReverseEngineeringModel as REM
 FileToRun = 'test.STL'
 current_dir = Path(__file__).resolve().parent
 
+FeatureList = []
+
 def RunPreflightCheck(inputfile):
     input_path = current_dir / inputfile
     if not input_path.exists():
@@ -27,13 +29,14 @@ def RunPreflightCheck(inputfile):
     return output
 
 def RunReverseEngineeringModel(inputfile):
-    REM.ReverseEngineer()
+    return REM.ReverseEngineer(inputfile)
 
 out = RunPreflightCheck(FileToRun)
 
 if out == 'CADmodel':
     print("The output is a CAD model.")
-    RunReverseEngineeringModel(FileToRun)
+    FeatureList = RunReverseEngineeringModel(FileToRun)
+    print("Predicted Features:", FeatureList)
 
 elif out == 'MESHmodel':
     print("This file cannot be reverse engineered into a CAD model.")

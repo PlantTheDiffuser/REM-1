@@ -6,17 +6,24 @@ from torchvision import transforms, datasets
 import torch.nn.functional as F
 
 
-''' Feature list:
-BossExtrude
-RevolveBoss
-RevolveCut
-CutExtrude
 
-'''
+FeatureList = [
+'BossExtrude',
+'RevolveBoss',
+'RevolveCut',
+'CutExtrude',
+'Fillet',
+'Chamfer',
+
+'Loft?']
+
 
 
 def predict_feature() -> str:
-    return None
+    rand = torch.randint(0, len(FeatureList), (1,)).item()
+    out = FeatureList[rand]
+    rand = 0
+    return out
 
 resolution = 150
 
