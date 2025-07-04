@@ -45,7 +45,7 @@ def RunPreflightCheck(png_path):
 
 # ---------- Run Reverse Engineering ----------
 def RunReverseEngineeringModel(inputfile):
-    return REM.ReverseEngineer(inputfile)
+    return REM.ReverseEngineer(inputfile, resolution)
 
 # ---------- Main Logic ----------
 out = RunPreflightCheck(temp_png_path)

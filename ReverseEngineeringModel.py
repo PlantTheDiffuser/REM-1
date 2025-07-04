@@ -20,7 +20,7 @@ epochs = 2
 acc_cutoff = 98
 TrainConvert = False
 batch_size = 32
-learning_rate = 0.0005
+learning_rate = 0.001
 
 # Testing
 test = False
@@ -266,10 +266,7 @@ def predict_feature(working_path, final_path):
         _, predicted = torch.max(output, 1)
         return class_names[predicted.item()]
 
-
-resolution = 150
-
-def ReverseEngineer(img_path):
+def ReverseEngineer(img_path, resolution=150):
     img_path = Path(img_path)
     # Upper limit for the number of steps to predict features
     max_steps = 10
