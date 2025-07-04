@@ -148,7 +148,7 @@ def PreprocessSingleFile(input_file, resolution=100):
     base_name = input_file.stem  # filename without extension
 
     # Create a temporary working directory
-    temp_dir = output_dir / f"{base_name}_temp"
+    temp_dir = output_dir / "temp"
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     # Copy the STL file into the temp directory so process_stl_files picks it up
@@ -166,5 +166,5 @@ def PreprocessSingleFile(input_file, resolution=100):
         #print(f"✅ Saved: {target_path}")
 
     # Clean up
-    shutil.rmtree(temp_dir)
+    #shutil.rmtree(temp_dir)
     #print(f"🧹 Cleaned temp: {temp_dir}")

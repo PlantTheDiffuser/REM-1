@@ -240,7 +240,6 @@ FeatureList = [
 
 def predict_feature(working_path, final_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
     model = FeatureClassifier().to(device)
 
     model_path = current_dir / "FeatureClassifier.pth"
@@ -271,10 +270,16 @@ def predict_feature(working_path, final_path):
 resolution = 150
 
 def ReverseEngineer(img_path):
+    img_path = Path(img_path)
     # Upper limit for the number of steps to predict features
     max_steps = 10
     featureList = [img_path]
+
+    working_path = img_path.parent / "working.png"
+    blank_img = Image.new("L", (resolution, resolution), color=0)
+    blank_img.save(working_path)
+
     for i in range(max_steps):
-        featureList.append(predict_feature())
-    
+        featureList.append(predict_feature(working_path, img_path))
+
     return featureList
