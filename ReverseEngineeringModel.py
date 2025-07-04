@@ -132,6 +132,7 @@ def train_model():
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
     model = FeatureClassifier().to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss()
@@ -188,6 +189,7 @@ def test_model():
     dataloader = DataLoader(dataset, batch_size=test_batch_size, shuffle=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
     model = FeatureClassifier().to(device)
 
     with warnings.catch_warnings():
@@ -236,11 +238,35 @@ FeatureList = [
 'Fillet',
 'Chamfer']
 
-def predict_feature() -> str:
-    rand = torch.randint(0, len(FeatureList), (1,)).item()
-    out = FeatureList[rand]
-    rand = 0
-    return out
+def predict_feature(working_path, final_path):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    model = FeatureClassifier().to(device)
+
+    model_path = current_dir / "FeatureClassifier.pth"
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model file not found at {model_path}")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        checkpoint = torch.load(model_path, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+    model.eval()
+
+    # Load and preprocess images
+    working_img = Image.open(working_path).convert("RGB")
+    final_img = Image.open(final_path).convert("RGB")
+    working_tensor = transform(working_img)
+    final_tensor = transform(final_img)
+
+    # Combine and predict
+    input_tensor = torch.cat([working_tensor, final_tensor], dim=0).unsqueeze(0).to(device)  # [1, 2, H, W]
+
+    with torch.no_grad():
+        output = model(input_tensor)
+        _, predicted = torch.max(output, 1)
+        return class_names[predicted.item()]
+
 
 resolution = 150
 
