@@ -15,12 +15,13 @@ resolution = 150
 
 # Training
 train = True
-resume_training = True
-epochs = 2
+resume_training = True     # Resume training from last checkpoint remember to name the checkpoint file "FeatureClassifierCheckpoint.pth"
+epochs = 12
 acc_cutoff = 98
-TrainConvert = False
-batch_size = 32
 learning_rate = 0.001
+TrainConvert = True
+batch_size = 32
+
 
 # Testing
 test = False
@@ -117,9 +118,9 @@ def convert_stl_folder(root_dir):
             working_png = model_folder / "working.png"
 
             if final_stl.exists():
-                conv.PreprocessSingleFile(final_stl, resolution)
+                conv.PreprocessSingleFile(final_stl, resolution, True)
             if working_stl.exists():
-                conv.PreprocessSingleFile(working_stl, resolution)
+                conv.PreprocessSingleFile(working_stl, resolution, True)
             else:
                 # Generate a blank working image
                 blank_img = Image.new("L", (resolution, resolution), color=0)

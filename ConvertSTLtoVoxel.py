@@ -135,7 +135,7 @@ def PreprocessSTL(CADmodel, MESHmodel, resolution=100):
             shutil.rmtree(subdir)
     print(f"Nuked: MESHmodel subdirectories")
 
-def PreprocessSingleFile(input_file, resolution=100):
+def PreprocessSingleFile(input_file, resolution=100, cleanup=False):
     """
     Converts a single STL file into a vertically stacked PNG image.
     Output image is saved in the same directory as the STL file,
@@ -165,6 +165,7 @@ def PreprocessSingleFile(input_file, resolution=100):
         shutil.move(str(img), str(target_path))
         #print(f"✅ Saved: {target_path}")
 
-    # Clean up
-    #shutil.rmtree(temp_dir)
-    #print(f"🧹 Cleaned temp: {temp_dir}")
+    if cleanup:
+        # Clean up the temporary directory
+        shutil.rmtree(temp_dir)
+        #print(f"🧹 Cleaned temp: {temp_dir}")
