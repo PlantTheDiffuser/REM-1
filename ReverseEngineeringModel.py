@@ -19,7 +19,7 @@ resume_training = True     # Resume training from last checkpoint remember to na
 epochs = 12
 acc_cutoff = 98
 learning_rate = 0.001
-TrainConvert = True
+TrainConvert = False
 batch_size = 32
 
 
