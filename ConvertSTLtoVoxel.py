@@ -4,6 +4,7 @@ from pathlib import Path
 import trimesh
 import numpy as np
 import shutil
+import re
 
 def process_stl_files(input_dir, resolution=100):
     def normalize_stl(in_path):
@@ -174,23 +175,27 @@ from pathlib import Path
 import trimesh
 import numpy as np
 
-def generate_rotated_stl_copies(input_file, num_copies=10):
+def generate_rotated_stl_copies_in_dir(input_dir, num_copies=10):
     """
-    Rotates the STL mesh around X, Y, and Z axes independently in evenly spaced steps over 360°.
-    Total output files = 3 * num_copies.
+    Rotates each .stl file in the directory around X, Y, and Z axes,
+    unless it's already been rotated (based on existing _rot[A]_angle.stl files).
     """
-    input_file = Path(input_file)
-    assert input_file.exists() and input_file.suffix.lower() == ".stl", "Input must be an existing .stl file"
+    input_dir = Path(input_dir)
+    assert input_dir.exists() and input_dir.is_dir(), "Input must be a valid directory"
 
-    mesh = trimesh.load(input_file)
-    assert isinstance(mesh, trimesh.Trimesh), "Loaded mesh is not a valid Trimesh object"
+    # Get all STL files
+    all_stl_files = list(input_dir.glob("*.stl"))
+    assert all_stl_files, "No STL files found in directory"
 
-    output_dir = input_file.parent
-    base_name = input_file.stem
+    # Extract base STL files (exclude rotated ones)
+    base_stl_files = [f for f in all_stl_files if not re.search(r"_rot[XYZ]_\d+\.stl$", f.name)]
 
-    # Generate discrete angles over 360°
+    if not base_stl_files:
+        print("🟡 No base STL files found (non-rotated)")
+        return
+
+    # Set up rotation steps
     angles = np.linspace(0, 360, num_copies, endpoint=False)
-    counter = 1
 
     axes = {
         'x': [1, 0, 0],
@@ -198,19 +203,32 @@ def generate_rotated_stl_copies(input_file, num_copies=10):
         'z': [0, 0, 1]
     }
 
-    for axis_name, axis_vector in axes.items():
-        for angle_deg in angles:
-            angle_rad = np.radians(angle_deg)
+    for stl_file in base_stl_files:
+        mesh = trimesh.load(stl_file)
+        if not isinstance(mesh, trimesh.Trimesh):
+            print(f"❌ Skipping invalid mesh: {stl_file.name}")
+            continue
 
-            rotated_mesh = mesh.copy()
-            rotation = trimesh.transformations.rotation_matrix(angle_rad, axis_vector)
-            rotated_mesh.apply_transform(rotation)
+        base_name = stl_file.stem
+        output_dir = stl_file.parent
 
-            output_file = output_dir / f"{base_name}_rot{axis_name.upper()}_{int(angle_deg)}.stl"
-            rotated_mesh.export(output_file)
-            counter += 1
+        for axis_name, axis_vector in axes.items():
+            for angle_deg in angles:
+                angle_int = int(angle_deg)
+                output_file = output_dir / f"{base_name}_rot{axis_name.upper()}_{angle_int}.stl"
+
+                if output_file.exists():
+                    # Already exists, skip it
+                    continue
+
+                rotated_mesh = mesh.copy()
+                angle_rad = np.radians(angle_deg)
+                rotation = trimesh.transformations.rotation_matrix(angle_rad, axis_vector)
+                rotated_mesh.apply_transform(rotation)
+
+                rotated_mesh.export(output_file)
+                # print(f"✅ Saved: {output_file}")
 
 
 current_dir = Path(__file__).resolve().parent
-current_dir = current_dir / "test.stl"
-generate_rotated_stl_copies(current_dir, 5)
+generate_rotated_stl_copies_in_dir(current_dir, 5)
