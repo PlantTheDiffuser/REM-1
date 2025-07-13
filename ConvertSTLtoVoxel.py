@@ -82,8 +82,6 @@ def process_stl_files(input_dir, resolution=100):
 
     print('🎉 All STL files processed and padded to fixed shape.')
 
-
-
 def stack_pngs_vertically(source_dir):
     for subdir in Path(source_dir).iterdir():
         if subdir.is_dir():
@@ -119,6 +117,10 @@ def PreprocessSTL(CADmodel, MESHmodel, resolution=100):
     Path(CADmodel).mkdir(parents=True, exist_ok=True)
     Path(MESHmodel).mkdir(parents=True, exist_ok=True)
 
+    # Generate rotated STL copies
+    generate_rotated_stl_copies_in_dir(CADmodel, 5)
+    generate_rotated_stl_copies_in_dir(MESHmodel, 5)
+    
     # Process CADmodel and MESHmodel directories
     process_stl_files(CADmodel, resolution)
     process_stl_files(MESHmodel, resolution)
@@ -170,10 +172,6 @@ def PreprocessSingleFile(input_file, resolution=100, cleanup=False):
         # Clean up the temporary directory
         shutil.rmtree(temp_dir)
         #print(f"🧹 Cleaned temp: {temp_dir}")
-
-from pathlib import Path
-import trimesh
-import numpy as np
 
 def generate_rotated_stl_copies_in_dir(input_dir, num_copies=10):
     """
