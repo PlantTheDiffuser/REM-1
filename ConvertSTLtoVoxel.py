@@ -169,3 +169,48 @@ def PreprocessSingleFile(input_file, resolution=100, cleanup=False):
         # Clean up the temporary directory
         shutil.rmtree(temp_dir)
         #print(f"🧹 Cleaned temp: {temp_dir}")
+
+from pathlib import Path
+import trimesh
+import numpy as np
+
+def generate_rotated_stl_copies(input_file, num_copies=10):
+    """
+    Rotates the STL mesh around X, Y, and Z axes independently in evenly spaced steps over 360°.
+    Total output files = 3 * num_copies.
+    """
+    input_file = Path(input_file)
+    assert input_file.exists() and input_file.suffix.lower() == ".stl", "Input must be an existing .stl file"
+
+    mesh = trimesh.load(input_file)
+    assert isinstance(mesh, trimesh.Trimesh), "Loaded mesh is not a valid Trimesh object"
+
+    output_dir = input_file.parent
+    base_name = input_file.stem
+
+    # Generate discrete angles over 360°
+    angles = np.linspace(0, 360, num_copies, endpoint=False)
+    counter = 1
+
+    axes = {
+        'x': [1, 0, 0],
+        'y': [0, 1, 0],
+        'z': [0, 0, 1]
+    }
+
+    for axis_name, axis_vector in axes.items():
+        for angle_deg in angles:
+            angle_rad = np.radians(angle_deg)
+
+            rotated_mesh = mesh.copy()
+            rotation = trimesh.transformations.rotation_matrix(angle_rad, axis_vector)
+            rotated_mesh.apply_transform(rotation)
+
+            output_file = output_dir / f"{base_name}_rot{axis_name.upper()}_{int(angle_deg)}.stl"
+            rotated_mesh.export(output_file)
+            counter += 1
+
+
+current_dir = Path(__file__).resolve().parent
+current_dir = current_dir / "test.stl"
+generate_rotated_stl_copies(current_dir, 5)
