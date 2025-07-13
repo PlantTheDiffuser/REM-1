@@ -229,6 +229,29 @@ def generate_rotated_stl_copies_in_dir(input_dir, num_copies=10):
                 rotated_mesh.export(output_file)
                 # print(f"✅ Saved: {output_file}")
 
+def nuke_rotated_stl_files(directory):
+    """
+    Deletes all rotated STL files in the specified directory.
+    Matches files ending with _rotX_*, _rotY_*, or _rotZ_*.
+    """
+    directory = Path(directory)
+    assert directory.exists() and directory.is_dir(), "Must be a valid directory"
+
+    rot_pattern = re.compile(r"_rot[XYZ]_\d+\.stl$", re.IGNORECASE)
+    nuked_files = []
+
+    for file in directory.glob("*.stl"):
+        if rot_pattern.search(file.name):
+            try:
+                file.unlink()
+                nuked_files.append(file.name)
+            except Exception as e:
+                print(f"❌ Failed to delete {file.name}: {e}")
+
+    print(f"💣 Nuked {len(nuked_files)} rotated files:")
+    for name in nuked_files:
+        print(f"  - {name}")
 
 current_dir = Path(__file__).resolve().parent
 generate_rotated_stl_copies_in_dir(current_dir, 5)
+nuke_rotated_stl_files(current_dir)
