@@ -8,13 +8,14 @@ from pathlib import Path
 import ConvertSTLtoVoxel as conv
 from itertools import islice
 import warnings
+from datetime import datetime
 
 #Preprocessing
 resolution = 150        # Number of slices/images per file
 
 #Training
-train = True           # Set to True if you want to train on the given data
-resume_training = True  # Set to True to continue from checkpoint           '''[Make sure to rename the checkpoint file to PreflightCheckCheckpoint.pth]'''
+train = False           # Set to True if you want to train on the given data
+resume_training = False  # Set to True to continue from checkpoint           '''[Make sure to rename the checkpoint file to PreflightCheckCheckpoint.pth]'''
 
 batch_size = 50         # Adjust batch size as needed
 learning_rate = 0.001   # Learning rate for the optimizer
@@ -23,7 +24,7 @@ acc_cutoff = 99        # Once the model reaches this accuracy, training stops
 TrainConvert = True    # Set to True if you want to convert STL files to PNG images for training
 
 #Testing
-test = True            # Set to True if you want to test the trained model
+test = False            # Set to True if you want to test the trained model
 test_batch_size = 15    # Adjust batch size for testing if needed | Set this to a value over 100 to keep training
 TestConvert = False      # Set to True if you want to convert STL files to PNG images for testing
 
@@ -274,3 +275,8 @@ if __name__ == "__main__":
         
         print(f"Test Accuracy for CADmodel: {TestAccuracyCAD:.2f}%")
         print(f"Test Accuracy for MESHmodel: {TestAccuracyMESH:.2f}%")
+
+
+now = datetime.now()
+formatted_timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+print(formatted_timestamp)

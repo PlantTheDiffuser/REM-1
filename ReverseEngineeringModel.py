@@ -7,6 +7,7 @@ from PIL import Image
 from pathlib import Path
 import ConvertSTLtoVoxel as conv
 import warnings
+from datetime import datetime
 
 # -------------------- Settings --------------------
 
@@ -281,3 +282,8 @@ def ReverseEngineer(img_path, resolution=150):
         featureList.append(predict_feature(working_path, img_path))
 
     return featureList
+
+
+now = datetime.now()
+formatted_timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+print(formatted_timestamp)
