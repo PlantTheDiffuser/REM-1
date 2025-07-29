@@ -16,7 +16,7 @@ resolution = 150
 
 # Training
 train = True
-resume_training = True     # Resume training from last checkpoint remember to name the checkpoint file "FeatureClassifierCheckpoint.pth"
+resume_training = False     # Resume training from last checkpoint remember to name the checkpoint file "FeatureClassifierCheckpoint.pth"
 epochs = 12
 acc_cutoff = 98
 learning_rate = 0.001
@@ -124,7 +124,7 @@ def convert_stl_folder(root_dir):
                 conv.PreprocessSingleFile(working_stl, resolution, True)
             else:
                 # Generate a blank working image
-                blank_img = Image.new("L", (resolution, resolution), color=0)
+                blank_img = Image.new("L", (resolution, resolution**2), color=0)
                 blank_img.save(working_png)
 
 # -------------------- Training --------------------

@@ -14,14 +14,14 @@ from datetime import datetime
 resolution = 150        # Number of slices/images per file
 
 #Training
-train = False           # Set to True if you want to train on the given data
-resume_training = False  # Set to True to continue from checkpoint           '''[Make sure to rename the checkpoint file to PreflightCheckCheckpoint.pth]'''
+train = True           # Set to True if you want to train on the given data
+resume_training = True  # Set to True to continue from checkpoint           '''[Make sure to rename the checkpoint file to PreflightCheckCheckpoint.pth]'''
 
 batch_size = 50         # Adjust batch size as needed
 learning_rate = 0.001   # Learning rate for the optimizer
 epochs = 16              # Number of epochs for training | If starting from a checkpoint, this will be added to the current epoch count
 acc_cutoff = 99        # Once the model reaches this accuracy, training stops
-TrainConvert = True    # Set to True if you want to convert STL files to PNG images for training
+TrainConvert = False    # Set to True if you want to convert STL files to PNG images for training
 
 #Testing
 test = False            # Set to True if you want to test the trained model
