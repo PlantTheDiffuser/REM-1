@@ -1,0 +1,32 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CAD Reverse Engineer</title>
+</head>
+<body>
+  <h1>Upload an STL File</h1>
+  <form action="/" method="POST" enctype="multipart/form-data">
+    <input type="file" name="file">
+    <input type="submit" value="Run">
+  </form>
+
+  {% if error %}
+    <p style="color:red;">{{ error }}</p>
+  {% endif %}
+
+  {% if result %}
+    <h2>{{ result }}</h2>
+  {% endif %}
+
+  {% if features %}
+    <h3>Predicted Features:</h3>
+    <ul>
+      {% for f in features %}
+        <li>{{ f }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</body>
+</html>
