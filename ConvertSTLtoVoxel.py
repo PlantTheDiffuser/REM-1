@@ -249,7 +249,3 @@ def nuke_rotated_stl_files(directory):
     print(f"💣 Nuked {len(nuked_files)} rotated files:")
     for name in nuked_files:
         print(f"  - {name}")
-
-current_dir = Path(__file__).resolve().parent
-generate_rotated_stl_copies_in_dir(current_dir, 5)
-nuke_rotated_stl_files(current_dir)
