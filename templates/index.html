@@ -1,12 +1,36 @@
-<!-- templates/index.html -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CAD Reverse Engineer</title>
+  <title>Reverse Engineering Model Test</title>
+  <style>
+    .feature-box {
+      border: 2px solid #333;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .feature-text {
+      font-size: 1.3em;
+      font-weight: bold;
+    }
+
+    .viewer {
+      width: 300px;
+      height: 300px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Upload an STL File</h1>
+  <h1>CAD Reverse Engineering Made Easy</h1>
+  <p>Upload an STL File</p>
+
+  {% if message %}
+    <p style="color:green;">{{ message }}</p>
+  {% endif %}
   <form action="/" method="POST" enctype="multipart/form-data">
     <input type="file" name="file">
     <input type="submit" value="Run">
@@ -22,11 +46,57 @@
 
   {% if features %}
     <h3>Predicted Features:</h3>
-    <ul>
-      {% for f in features %}
-        <li>{{ f }}</li>
-      {% endfor %}
-    </ul>
+    {% for idx, f in enumerate(features) %}
+      <div class="feature-box">
+        <div class="feature-text">
+          {% if idx == 0 %}
+            Name: {{ f }}
+          {% else %}
+            {{ f }}
+          {% endif %}
+        </div>
+        <div class="viewer" id="viewer-{{ idx }}"></div>
+      </div>
+    {% endfor %}
   {% endif %}
+
+  <!-- Include Three.js and STLLoader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+  <script>
+    const STL_URL = "{{ url_for('static', filename='uploaded_model.stl') }}";
+
+    {% if features %}
+      {% for idx in range(features|length) %}
+        loadSTL("viewer-{{ idx }}");
+      {% endfor %}
+    {% endif %}
+
+    function loadSTL(containerId) {
+      const container = document.getElementById(containerId);
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(300, 300);
+      container.appendChild(renderer.domElement);
+
+      const loader = new THREE.STLLoader();
+      loader.load(STL_URL, function (geometry) {
+        const material = new THREE.MeshNormalMaterial();
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+        mesh.rotation.x = -0.5 * Math.PI;
+
+        const animate = function () {
+          requestAnimationFrame(animate);
+          mesh.rotation.z += 0.01;
+          renderer.render(scene, camera);
+        };
+
+        camera.position.z = 100;
+        animate();
+      });
+    }
+  </script>
 </body>
 </html>
