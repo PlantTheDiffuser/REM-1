@@ -275,7 +275,7 @@ def ReverseEngineer(img_path, resolution=150):
     featureList = [img_path]
 
     working_path = img_path.parent / "working.png"
-    blank_img = Image.new("L", (resolution, resolution), color=0)
+    blank_img = Image.new("L", (resolution, resolution**2), color=0)
     blank_img.save(working_path)
 
     for i in range(max_steps):

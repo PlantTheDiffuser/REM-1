@@ -46,16 +46,16 @@
 
   {% if features %}
     <h3>Predicted Features:</h3>
-    {% for idx, f in enumerate(features) %}
+    {% for f in features %}
       <div class="feature-box">
         <div class="feature-text">
-          {% if idx == 0 %}
+          {% if loop.index0 == 0 %}
             Name: {{ f }}
           {% else %}
             {{ f }}
           {% endif %}
         </div>
-        <div class="viewer" id="viewer-{{ idx }}"></div>
+        <div class="viewer" id="viewer-{{ loop.index0 }}"></div>
       </div>
     {% endfor %}
   {% endif %}
@@ -68,7 +68,7 @@
 
     {% if features %}
       {% for idx in range(features|length) %}
-        loadSTL("viewer-{{ idx }}");
+        loadSTL("viewer-{{ loop.index0 }}");
       {% endfor %}
     {% endif %}
 
@@ -82,18 +82,26 @@
 
       const loader = new THREE.STLLoader();
       loader.load(STL_URL, function (geometry) {
+        geometry.computeBoundingBox();
+        const boundingBox = geometry.boundingBox;
+        const center = new THREE.Vector3();
+        boundingBox.getCenter(center);
+        geometry.translate(-center.x, -center.y, -center.z); // Center the geometry
+
         const material = new THREE.MeshNormalMaterial();
         const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
         mesh.rotation.x = -0.5 * Math.PI;
 
+        // Set camera to isometric view
+        camera.position.set(100, 100, 100);
+        camera.lookAt(0, 0, 0);
+
         const animate = function () {
           requestAnimationFrame(animate);
-          mesh.rotation.z += 0.01;
           renderer.render(scene, camera);
         };
 
-        camera.position.z = 100;
         animate();
       });
     }

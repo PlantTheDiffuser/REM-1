@@ -41,7 +41,7 @@ def index():
                 TEMP_FOLDER.mkdir(exist_ok=True)
                 temp_stl_path = TEMP_FOLDER / filename
                 shutil.copy(str(file_path), str(temp_stl_path))
-                conv.PreprocessSingleFile(temp_stl_path, resolution=150)
+                conv.PreprocessSingleFile(temp_stl_path, resolution=150, cleanup=True)
 
                 # Step 2: Locate PNG output
                 png_filename = filename.replace('.STL', '.png').replace('.stl', '.png')
