@@ -6,21 +6,50 @@
   <style>
     .feature-box {
       border: 2px solid #333;
-      padding: 20px;
-      margin-bottom: 30px;
+      border-radius: 24px; /* Match viewer's radius */
+      padding: 5px;
+      margin-bottom: 10px;
       display: flex;
       align-items: center;
       gap: 20px;
+      max-width: 900px;
+      background: #fafafa;
+    }
+
+    .feature-number {
+      font-size: 1.2em;
+      font-weight: bold;
+      width: 32px;
+      text-align: center;
+      color: #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
     }
 
     .feature-text {
-      font-size: 1.3em;
+      font-size: 3em; /* 6 times bigger */
       font-weight: bold;
+      padding: 0 24px;
+      padding-right: 50px;
+      white-space: nowrap;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: clip;
     }
 
     .viewer {
-      width: 300px;
-      height: 300px;
+      width: 400px;
+      height: 400px;
+      border-radius: 24px; /* Match feature-box radius */
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      margin-left: auto; /* Push viewer to the right */
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   </style>
 </head>
@@ -47,16 +76,17 @@
   {% if features %}
     <h3>Predicted Features:</h3>
     {% for f in features %}
-      <div class="feature-box">
-        <div class="feature-text">
-          {% if loop.index0 == 0 %}
-            Name: {{ f }}
-          {% else %}
+      {% if loop.index0 == 0 %}
+        <div style="font-weight:bold; margin-bottom:16px; margin-top:8px; letter-spacing:1px;">{{ f | basename_noext }}</div>
+      {% else %}
+        <div class="feature-box">
+          <div class="feature-number">{{ loop.index0 }}</div>
+          <div class="feature-text">
             {{ f }}
-          {% endif %}
+          </div>
+          <div class="viewer" id="viewer-{{ loop.index0 }}"></div>
         </div>
-        <div class="viewer" id="viewer-{{ loop.index0 }}"></div>
-      </div>
+      {% endif %}
     {% endfor %}
   {% endif %}
 
@@ -68,7 +98,9 @@
 
     {% if features %}
       {% for idx in range(features|length) %}
-        loadSTL("viewer-{{ loop.index0 }}");
+        {% if idx != 0 %}
+          loadSTL("viewer-{{ idx }}");
+        {% endif %}
       {% endfor %}
     {% endif %}
 
@@ -77,7 +109,7 @@
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
       const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(300, 300);
+      renderer.setSize(400, 400); // doubled
       container.appendChild(renderer.domElement);
 
       const loader = new THREE.STLLoader();
@@ -86,15 +118,21 @@
         const boundingBox = geometry.boundingBox;
         const center = new THREE.Vector3();
         boundingBox.getCenter(center);
-        geometry.translate(-center.x, -center.y, -center.z); // Center the geometry
+        geometry.translate(-center.x, -center.y, -center.z);
+
+        // Scale geometry to fit viewer
+        const size = new THREE.Vector3();
+        boundingBox.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 360 / maxDim; // doubled margin for 400px viewer
+        geometry.scale(scale, scale, scale);
 
         const material = new THREE.MeshNormalMaterial();
         const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
         mesh.rotation.x = -0.5 * Math.PI;
 
-        // Set camera to isometric view
-        camera.position.set(100, 100, 100);
+        camera.position.set(200, 200, 200); // doubled
         camera.lookAt(0, 0, 0);
 
         const animate = function () {

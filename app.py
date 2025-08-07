@@ -75,5 +75,10 @@ def index():
 
     return render_template('index.html')
 
+@app.template_filter('basename_noext')
+def basename_noext(path):
+    import os
+    return os.path.splitext(os.path.basename(path))[0]
+
 if __name__ == '__main__':
     app.run(debug=True)
