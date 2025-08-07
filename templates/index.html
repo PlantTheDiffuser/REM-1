@@ -17,11 +17,11 @@
     }
 
     .feature-number {
-      font-size: 1.2em;
+      font-size: 2em;
       font-weight: bold;
       width: 32px;
+      padding-left: 30px;
       text-align: center;
-      color: #555;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -29,7 +29,7 @@
     }
 
     .feature-text {
-      font-size: 3em; /* 6 times bigger */
+      font-size: 2em; /* 6 times bigger */
       font-weight: bold;
       padding: 0 24px;
       padding-right: 50px;
@@ -77,10 +77,22 @@
     <h3>Predicted Features:</h3>
     {% for f in features %}
       {% if loop.index0 == 0 %}
-        <div style="font-weight:bold; margin-bottom:16px; margin-top:8px; letter-spacing:1px;">{{ f | basename_noext }}</div>
+        <div style="
+          font-weight:bold;
+          font-size:3em;
+          margin-bottom:16px;
+          margin-top:8px;
+          letter-spacing:1px;
+          padding-left:350px;
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        ">
+          {{ f | basename_noext }}
+        </div>
       {% else %}
         <div class="feature-box">
-          <div class="feature-number">{{ loop.index0 }}</div>
+          <div class="feature-number">{{ loop.index0 }})</div>
           <div class="feature-text">
             {{ f }}
           </div>
