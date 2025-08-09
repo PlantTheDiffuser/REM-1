@@ -5,3 +5,6 @@
 *.zip
 *.pyc
 *.pth
+venv/
+__pycache__/
+*.pyc
