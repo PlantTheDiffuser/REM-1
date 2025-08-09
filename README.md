@@ -5,9 +5,11 @@ This tool would be able to intelligently produce a parameterized 3d-model from a
 
 ---HOW TO USE----
 
-git clone https://github.com/PlantTheDiffuser/REM-1.git
-source venv/bin/activate
-pip install -r requirements.txt
+1. clone repo
+2. cd into project directory
+3. 
+4. source venv/bin/activate
+5. pip install -r requirements.txt
 
 -----------------
 
