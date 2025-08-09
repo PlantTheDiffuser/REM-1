@@ -26,6 +26,10 @@ def allowed_file(filename):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
+        if request.form.get('reset'):
+            # Optionally, delete files in static/ if needed
+            return render_template('index.html')
+
         if 'file' not in request.files:
             return render_template('index.html', error='No file part')
         file = request.files['file']

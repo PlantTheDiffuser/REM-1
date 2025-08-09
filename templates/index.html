@@ -51,6 +51,34 @@
       align-items: center;
       justify-content: center;
     }
+
+    .title-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .title {
+      font-weight: bold;
+      font-size: 3em;
+      margin-bottom: 16px;
+      margin-top: 8px;
+      letter-spacing: 1px;
+      text-align: center;
+      flex: 1;
+    }
+
+    .reset-button {
+      margin-left: 16px;
+    }
+
+    .reset-button button {
+      font-size: 1.2em;
+      padding: 8px 24px;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -74,69 +102,55 @@
   {% endif %}
 
   {% if features %}
+    <div class="title-container">
+      <div class="title">
+        {{ features[0] | basename_noext }}
+      </div>
+      <form method="POST" action="/" class="reset-button">
+        <input type="hidden" name="reset" value="1">
+        <button type="submit">Reset</button>
+      </form>
+    </div>
+
     <h3>Predicted Features:</h3>
     {% for f in features %}
       {% if loop.index0 == 0 %}
-        <div style="
-          font-weight:bold;
-          font-size:3em;
-          margin-bottom:16px;
-          margin-top:8px;
-          letter-spacing:1px;
-          padding-left:350px;
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        ">
-          {{ f | basename_noext }}
-        </div>
+        <!-- Skip the first feature as it's already displayed in the title -->
       {% else %}
         <div class="feature-box">
           <div class="feature-number">{{ loop.index0 }})</div>
-          <div class="feature-text">
-            {{ f }}
-          </div>
-          <div class="viewer" id="viewer-{{ loop.index0 }}"></div>
+          <div class="feature-text">{{ f }}</div>
+          <div class="viewer" id="viewer-{{ loop.index0 }}" data-stl="{{ url_for('static', filename='working-' ~ loop.index0 ~ '.stl') }}"></div>
         </div>
       {% endif %}
     {% endfor %}
   {% endif %}
 
   <!-- Include Three.js and STLLoader -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
   <script>
-    const STL_URL = "{{ url_for('static', filename='uploaded_model.stl') }}";
-
-    {% if features %}
-      {% for idx in range(features|length) %}
-        {% if idx != 0 %}
-          loadSTL("viewer-{{ idx }}");
-        {% endif %}
-      {% endfor %}
-    {% endif %}
-
     function loadSTL(containerId) {
       const container = document.getElementById(containerId);
+      const stlUrl = container.getAttribute('data-stl');
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
       const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(400, 400); // doubled
+      renderer.setSize(400, 400);
       container.appendChild(renderer.domElement);
 
       const loader = new THREE.STLLoader();
-      loader.load(STL_URL, function (geometry) {
+      loader.load(stlUrl, function (geometry) {
         geometry.computeBoundingBox();
         const boundingBox = geometry.boundingBox;
         const center = new THREE.Vector3();
         boundingBox.getCenter(center);
         geometry.translate(-center.x, -center.y, -center.z);
 
-        // Scale geometry to fit viewer
         const size = new THREE.Vector3();
         boundingBox.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 360 / maxDim; // doubled margin for 400px viewer
+        const scale = 360 / maxDim;
         geometry.scale(scale, scale, scale);
 
         const material = new THREE.MeshNormalMaterial();
@@ -144,17 +158,21 @@
         scene.add(mesh);
         mesh.rotation.x = -0.5 * Math.PI;
 
-        camera.position.set(200, 200, 200); // doubled
+        camera.position.set(200, 200, 200);
         camera.lookAt(0, 0, 0);
 
-        const animate = function () {
+        function animate() {
           requestAnimationFrame(animate);
           renderer.render(scene, camera);
-        };
-
+        }
         animate();
       });
     }
+
+    // Load all viewers
+    document.querySelectorAll('.viewer').forEach(viewer => {
+      loadSTL(viewer.id);
+    });
   </script>
 </body>
 </html>

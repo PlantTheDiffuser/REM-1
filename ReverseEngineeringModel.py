@@ -280,8 +280,15 @@ def ReverseEngineer(img_path, resolution=150):
 
     for i in range(max_steps):
         #featureList.append(predict_feature(working_path, img_path))
+
         #----This is random. ^^^ Uncomment for true prediction ^^^
-        featureList.append(FeatureList[torch.randint(low=0, high=5, size=(1,)).item()])
+        #featureList.append(FeatureList[torch.randint(low=0, high=5, size=(1,)).item()])
+
+        #-----This feature list is only for the demo parts----
+        demo = [0, 4, 3]
+        if i > 2:
+            break
+        featureList.append(FeatureList[demo[i]])
 
     return featureList
 
