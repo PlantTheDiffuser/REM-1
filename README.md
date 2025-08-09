@@ -3,6 +3,13 @@
 TL;DR - STL files are used for renders and 3d printing, and many times people publish stl files online, but they can't be easily modified without manually reverse engineering it.
 This tool would be able to intelligently produce a parameterized 3d-model from a static 3d-model.
 
+---HOW TO USE----
+
+git clone https://github.com/PlantTheDiffuser/REM-1.git
+source venv/bin/activate
+pip install -r requirements.txt
+
+-----------------
 
 
 The way that STL, or stereolithography file works, is a file that stores a series of 3 coordinate points that formes many triangles that can be rendered into a 3d shape. The way that CAD software works however, is by using a set of sketches on a 2d plane, and applying features to that sketch such as extrudes, revolves, etc. Instead of a list of points, it stores the file as a set of instructions to be rendered(example image below).
