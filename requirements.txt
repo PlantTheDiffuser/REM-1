@@ -1,5 +1,9 @@
+blinker
+click
 filelock
+Flask
 fsspec
+itsdangerous
 Jinja2
 MarkupSafe
 mpmath
@@ -10,4 +14,3 @@ sympy
 torch
 torchvision
 trimesh
-typing_extensions
