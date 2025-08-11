@@ -10,7 +10,7 @@ This tool would be able to intelligently produce a parameterized 3d-model from a
 1. clone repo
 2. cd into project directory
 3. python3 -m venv venv
-4. source venv/bin/activate [mac] | venv/Scripts/activate.bat [windows]
+4. source venv/bin/activate [MAC/GIT Bash] | venv/Scripts/activate.bat [Windows]
 5. pip install -r requirements.txt
 
 -----------------
