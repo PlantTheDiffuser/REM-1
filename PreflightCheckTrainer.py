@@ -138,13 +138,6 @@ def predict_image(image_path):
         _, pred = torch.max(output, 1)
         return class_names[pred.item()]
 
-# ---------- Dataset Setup ----------
-data_dir = str(current_dir / 'PreflightCheckTrainingData')
-dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-#print(f"Classes found: {dataset.classes}")  # Should print ['CADmodel', 'MESHmodel']
-
 # ---------- Model Definition ----------
 
 
@@ -160,7 +153,14 @@ if __name__ == "__main__":
         print("Conversion complete.")
     if train:
     # ---------- Training Setup ----------
+        # ---------- Dataset Setup ----------
+        data_dir = str(current_dir / 'PreflightCheckTrainingData')
+        dataset = datasets.ImageFolder(root=data_dir, transform=transform)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        
+        #print(f"Classes found: {dataset.classes}")  # Should print ['CADmodel', 'MESHmodel']
 
+        
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {device}")
         model = SliceStackClassifier().to(device)
