@@ -19,6 +19,10 @@ This tool would be able to intelligently produce a parameterized 3d-model from a
 1. python3 app.py
 2. GoTo http://127.0.0.1:5000/
 
+As of build [REM_POC_1] the actual reverse engineering is not done. This is a mockup of what the application should look like.
+*IF you're reading this right now*
+
+
 ---------------------
 
 The way that STL, or stereolithography file works, is a file that stores a series of 3 coordinate points that formes many triangles that can be rendered into a 3d shape. The way that CAD software works however, is by using a set of sketches on a 2d plane, and applying features to that sketch such as extrudes, revolves, etc. Instead of a list of points, it stores the file as a set of instructions to be rendered(example image below).
