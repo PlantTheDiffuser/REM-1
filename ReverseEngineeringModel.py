@@ -17,7 +17,7 @@ resolution = 150
 # Training
 train = True
 resume_training = False     # Resume training from last checkpoint remember to name the checkpoint file "FeatureClassifierCheckpoint.pth"
-epochs = 12
+epochs = 20
 acc_cutoff = 98
 learning_rate = 0.001
 TrainConvert = False
@@ -82,17 +82,17 @@ class FeatureClassifier(nn.Module):
     def __init__(self):
         super(FeatureClassifier, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(2, 32, kernel_size=5, stride=2, padding=2),  # Input: 2 channels
+            nn.Conv2d(2, 32, kernel_size=11, stride=4, padding=5),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(2),
-
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(2),
-
             nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-
             nn.AdaptiveAvgPool2d((1, 1))
         )
         self.classifier = nn.Sequential(
