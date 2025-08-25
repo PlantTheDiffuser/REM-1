@@ -229,7 +229,6 @@ if __name__ == "__main__":
         print("🔍 Starting testing...")
         test_model()
 
-
 # -------------------- Usage --------------------
 
 FeatureList = [
@@ -291,7 +290,6 @@ def ReverseEngineer(img_path, resolution=150):
         featureList.append(FeatureList[demo[i]])
 
     return featureList
-
 
 now = datetime.now()
 formatted_timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
