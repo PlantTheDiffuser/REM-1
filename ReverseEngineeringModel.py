@@ -16,7 +16,7 @@ resolution = 150
 
 # Training
 train = True
-resume_training = False     # Resume training from last checkpoint remember to name the checkpoint file "FeatureClassifierCheckpoint.pth"
+resume_training = True     # Resume training from last checkpoint remember to name the checkpoint file "FeatureClassifierCheckpoint.pth"
 epochs = 20
 acc_cutoff = 98
 learning_rate = 0.001

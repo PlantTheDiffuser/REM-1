@@ -25,7 +25,7 @@ def process_stl_files(input_dir, resolution=100):
 
     for filename in os.listdir(input_dir):
         if filename.lower().endswith(".stl"):
-            print(f'🔄 Processing STL file: {filename}')
+            print(f'[%] Processing STL file: {filename}')
             stl_file_in = os.path.join(input_dir, filename)
             base_name = os.path.splitext(filename)[0]
             voxel_out_dir = os.path.join(input_dir, base_name)
@@ -74,13 +74,13 @@ def process_stl_files(input_dir, resolution=100):
                     img = Image.fromarray(slice_img, mode='L')
                     img.save(os.path.join(voxel_out_dir, f"slice_{z:03d}.png"))
 
-                print(f'✅ Saved {resolution} slices to {voxel_out_dir}')
+                print(f'[OK] Saved {resolution} slices to {voxel_out_dir}')
 
             except Exception as e:
-                print(f'❌ Skipping {filename} due to error: {e}')
+                print(f'[X] Skipping {filename} due to error: {e}')
                 continue
 
-    print('🎉 All STL files processed and padded to fixed shape.')
+    print('[DONE!] All STL files processed and padded to fixed shape.')
 
 def stack_pngs_vertically(source_dir):
     for subdir in Path(source_dir).iterdir():
