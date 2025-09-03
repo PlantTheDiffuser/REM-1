@@ -189,7 +189,7 @@ def generate_rotated_stl_copies_in_dir(input_dir, num_copies=10):
     base_stl_files = [f for f in all_stl_files if not re.search(r"_rot[XYZ]_\d+\.stl$", f.name)]
 
     if not base_stl_files:
-        print("🟡 No base STL files found (non-rotated)")
+        print("[X] No base STL files found (non-rotated)")
         return
 
     # Set up rotation steps
@@ -204,7 +204,7 @@ def generate_rotated_stl_copies_in_dir(input_dir, num_copies=10):
     for stl_file in base_stl_files:
         mesh = trimesh.load(stl_file)
         if not isinstance(mesh, trimesh.Trimesh):
-            print(f"❌ Skipping invalid mesh: {stl_file.name}")
+            print(f"[X] Skipping invalid mesh: {stl_file.name}")
             continue
 
         base_name = stl_file.stem
@@ -244,7 +244,7 @@ def nuke_rotated_stl_files(directory):
                 file.unlink()
                 nuked_files.append(file.name)
             except Exception as e:
-                print(f"❌ Failed to delete {file.name}: {e}")
+                print(f"[X] Failed to delete {file.name}: {e}")
 
     print(f"💣 Nuked {len(nuked_files)} rotated files:")
     for name in nuked_files:
