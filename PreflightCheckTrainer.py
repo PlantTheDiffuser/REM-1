@@ -14,8 +14,8 @@ from datetime import datetime
 resolution = 150        # Number of slices/images per file
 
 #Training
-train = True           # Set to True if you want to train on the given data
-resume_training = True  # Set to True to continue from checkpoint           '''[Make sure to rename the checkpoint file to PreflightCheckCheckpoint.pth]'''
+train = False           # Set to True if you want to train on the given data
+resume_training = False  # Set to True to continue from checkpoint           '''[Make sure to rename the checkpoint file to PreflightCheckCheckpoint.pth]'''
 
 batch_size = 50         # Adjust batch size as needed
 learning_rate = 0.001   # Learning rate for the optimizer
@@ -139,9 +139,40 @@ def predict_image(image_path):
         return class_names[pred.item()]
 
 # ---------- Dataset Setup ----------
-data_dir = str(current_dir / 'PreflightCheckTrainingData')
-dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+# Use Path objects for safer checks
+data_dir = current_dir / 'PreflightCheckTrainingData'
+
+# If the expected training data folder doesn't exist, create a helpful empty structure
+if not data_dir.exists():
+    print(f"⚠️ Training data directory not found at {data_dir}")
+    print("Creating expected folder structure so the program can continue.\n" \
+          "Add your PNG training images into the created subfolders or set TrainConvert=True to generate them from STL files.")
+    (data_dir / 'CADmodel').mkdir(parents=True, exist_ok=True)
+    (data_dir / 'MESHmodel').mkdir(parents=True, exist_ok=True)
+
+# Check for any valid image files before calling ImageFolder to avoid torchvision errors
+VALID_EXTS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp')
+has_files = any(p.suffix.lower() in VALID_EXTS for p in data_dir.rglob('*') if p.is_file())
+
+if not has_files:
+    print(f"❌ No training images found under {data_dir}. Expected image files with extensions: {VALID_EXTS}")
+    print("Created folder structure but found no images. Add training images into 'CADmodel' and 'MESHmodel' or enable conversion by setting TrainConvert=True.")
+    dataset = None
+    dataloader = None
+else:
+    # ImageFolder requires the root to exist; convert Path to str for torchvision API
+    dataset = datasets.ImageFolder(root=str(data_dir), transform=transform)
+
+    if len(dataset.classes) == 0:
+        print(f"No class folders were found inside {data_dir}. Expected at least: ['CADmodel','MESHmodel']")
+    else:
+        # If classes exist but are empty, warn the user
+        empty_classes = [c for c in dataset.classes if not any((data_dir / c).iterdir())]
+        if empty_classes:
+            print(f"Found class folders but no images inside them: {empty_classes}\n" \
+                  "Add training images or run conversion (set TrainConvert=True).")
+
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 #print(f"Classes found: {dataset.classes}")  # Should print ['CADmodel', 'MESHmodel']
 
@@ -160,69 +191,73 @@ if __name__ == "__main__":
         print("Conversion complete.")
     if train:
     # ---------- Training Setup ----------
+        # Ensure we have data before proceeding
+        if dataloader is None:
+            print("⚠️ No training data available, skipping training. Populate the training folders or set TrainConvert=True to generate data.")
+        else:
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {device}")
-        model = SliceStackClassifier().to(device)
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            print(f"Using device: {device}")
+            model = SliceStackClassifier().to(device)
+            criterion = nn.CrossEntropyLoss()
+            optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-        start_epoch = 0  # Default to 0 unless resuming
-        if resume_training:
-            checkpoint_path = current_dir / 'PreflightCheckCheckpoint.pth'
-            if checkpoint_path.exists():
-                print("🔁 Resuming training from checkpoint...")
-                checkpoint = torch.load(checkpoint_path)
-                model.load_state_dict(checkpoint['model_state_dict'])
-                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-                start_epoch = checkpoint['epoch']
-                print(f"✅ Resumed from epoch {start_epoch}")
-            else:
-                print("⚠️ Expected checkpoint model but was not found — starting fresh.")
+            start_epoch = 0  # Default to 0 unless resuming
+            if resume_training:
+                checkpoint_path = current_dir / 'PreflightCheckCheckpoint.pth'
+                if checkpoint_path.exists():
+                    print("🔁 Resuming training from checkpoint...")
+                    checkpoint = torch.load(checkpoint_path)
+                    model.load_state_dict(checkpoint['model_state_dict'])
+                    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                    start_epoch = checkpoint['epoch']
+                    print(f"✅ Resumed from epoch {start_epoch}")
+                else:
+                    print("⚠️ Expected checkpoint model but was not found — starting fresh.")
 
 
-        # ---------- Training Loop ----------
+            # ---------- Training Loop ----------
 
-        num_epochs = start_epoch + epochs
-        for epoch in range(start_epoch, num_epochs):
-            total_loss = 0
-            correct = 0
-            total = 0
-            print(f"Starting epoch {epoch+1}/{num_epochs}")
-            model.train()
-            for images, labels in dataloader:
-                images, labels = images.to(device), labels.to(device)
+            num_epochs = start_epoch + epochs
+            for epoch in range(start_epoch, num_epochs):
+                total_loss = 0
+                correct = 0
+                total = 0
+                print(f"Starting epoch {epoch+1}/{num_epochs}")
+                model.train()
+                for images, labels in dataloader:
+                    images, labels = images.to(device), labels.to(device)
 
-                optimizer.zero_grad()
-                outputs = model(images)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
+                    optimizer.zero_grad()
+                    outputs = model(images)
+                    loss = criterion(outputs, labels)
+                    loss.backward()
+                    optimizer.step()
 
-                total_loss += loss.item()
-                _, predicted = torch.max(outputs, 1)
-                correct += (predicted == labels).sum().item()
-                total += labels.size(0)
-                print(f"Batch Loss: {loss.item():.4f} - Correct: {correct}/{total}", end='\r')
+                    total_loss += loss.item()
+                    _, predicted = torch.max(outputs, 1)
+                    correct += (predicted == labels).sum().item()
+                    total += labels.size(0)
+                    print(f"Batch Loss: {loss.item():.4f} - Correct: {correct}/{total}", end='\r')
 
-            acc = 100 * correct / total
-            print(f"Epoch {epoch+1}/{num_epochs} - Loss: {total_loss:.4f} - Accuracy: {acc:.2f}%")
-            if acc >= acc_cutoff:
-                print(f"Early stopping at epoch {epoch+1} with accuracy {acc:.2f}%")
-                break
+                acc = 100 * correct / total
+                print(f"Epoch {epoch+1}/{num_epochs} - Loss: {total_loss:.4f} - Accuracy: {acc:.2f}%")
+                if acc >= acc_cutoff:
+                    print(f"Early stopping at epoch {epoch+1} with accuracy {acc:.2f}%")
+                    break
 
-        # ---------- Save Model ------------------
-        print("Training complete at epoch", num_epochs)
-        print('Saving model.....')
-        torch.save({
-            'epoch': epoch + 1,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict()
-        }, current_dir / 'PreflightCheck.pth')
+            # ---------- Save Model ------------------
+            print("Training complete at epoch", num_epochs)
+            print('Saving model.....')
+            torch.save({
+                'epoch': epoch + 1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict()
+            }, current_dir / 'PreflightCheck.pth')
 
-        print(f"Saved to: {current_dir / 'PreflightCheck.pth'}")
+            print(f"Saved to: {current_dir / 'PreflightCheck.pth'}")
 
-        # ---------- Prediction Example ----------
+            # ---------- Prediction Example ----------
         print("Training complete. Testing model...")
         
 

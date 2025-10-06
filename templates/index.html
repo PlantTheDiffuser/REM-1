@@ -79,6 +79,22 @@
       padding: 8px 24px;
       border-radius: 8px;
     }
+    .reset-camera-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 10;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #ccc;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .reset-camera-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
   </style>
 </head>
 <body>
@@ -120,53 +136,203 @@
         <div class="feature-box">
           <div class="feature-number">{{ loop.index0 }})</div>
           <div class="feature-text">{{ f }}</div>
-          <div class="viewer" id="viewer-{{ loop.index0 }}" data-stl="{{ url_for('static', filename='working-' ~ loop.index0 ~ '.stl') }}"></div>
+              <div class="viewer" id="viewer-{{ loop.index0 }}" data-stl="{{ url_for('static', filename='working-' ~ loop.index0 ~ '.stl') }}">
+                <button class="reset-camera-btn" id="reset-{{ loop.index0 }}" title="Reset camera">Reset</button>
+              </div>
         </div>
       {% endif %}
     {% endfor %}
   {% endif %}
 
-  <!-- Include Three.js and STLLoader -->
+  <!-- Include Three.js, STLLoader and OrbitControls -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script>
     function loadSTL(containerId) {
       const container = document.getElementById(containerId);
       const stlUrl = container.getAttribute('data-stl');
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(400, 400);
+
+      // Create renderer
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio || 1);
       container.appendChild(renderer.domElement);
 
+      // Scene and camera
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 10000);
+
+      // Controls for interaction (rotate, zoom, pan)
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.screenSpacePanning = false;
+      controls.minDistance = 10;
+      controls.maxDistance = 2000;
+
+      // Lights
+      const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambient);
+      const directional = new THREE.DirectionalLight(0xffffff, 0.6);
+      directional.position.set(1, 1, 1).normalize();
+      scene.add(directional);
+
+      // Fallback text node for errors
+      const errorNode = document.createElement('div');
+      errorNode.style.position = 'absolute';
+      errorNode.style.color = '#c00';
+      errorNode.style.fontSize = '12px';
+      errorNode.style.display = 'none';
+      errorNode.textContent = 'Failed to load STL';
+      container.style.position = 'relative';
+      container.appendChild(errorNode);
+
       const loader = new THREE.STLLoader();
-      loader.load(stlUrl, function (geometry) {
-        geometry.computeBoundingBox();
-        const boundingBox = geometry.boundingBox;
-        const center = new THREE.Vector3();
-        boundingBox.getCenter(center);
-        geometry.translate(-center.x, -center.y, -center.z);
+      // We'll store initial camera state here so reset can restore it
+      let initialState = null;
+      loader.load(
+        stlUrl,
+        function (geometry) {
+          if (!geometry) {
+            errorNode.style.display = '';
+            return;
+          }
 
-        const size = new THREE.Vector3();
-        boundingBox.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 360 / maxDim;
-        geometry.scale(scale, scale, scale);
+          geometry.computeBoundingBox();
+          const boundingBox = geometry.boundingBox;
+          const center = new THREE.Vector3();
+          boundingBox.getCenter(center);
+          geometry.translate(-center.x, -center.y, -center.z);
 
-        const material = new THREE.MeshNormalMaterial();
-        const mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
-        mesh.rotation.x = -0.5 * Math.PI;
+          const size = new THREE.Vector3();
+          boundingBox.getSize(size);
+          const maxDim = Math.max(size.x, size.y, size.z) || 1;
+          const scale = Math.min(container.clientWidth, container.clientHeight) * 0.6 / maxDim;
+          geometry.scale(scale, scale, scale);
 
-        camera.position.set(200, 200, 200);
-        camera.lookAt(0, 0, 0);
+          const material = new THREE.MeshStandardMaterial({ color: 0x999999, metalness: 0.2, roughness: 0.6 });
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
 
-        function animate() {
-          requestAnimationFrame(animate);
-          renderer.render(scene, camera);
+          // Compute bounding sphere and fit camera so the object is fully visible (zoomed out)
+          geometry.computeBoundingSphere();
+          const sphere = geometry.boundingSphere;
+          const radius = sphere ? sphere.radius : Math.max(size.x, size.y, size.z) * 0.5;
+          const centerSphere = sphere ? sphere.center : new THREE.Vector3(0, 0, 0);
+
+          // Set control target to model center
+          controls.target.copy(centerSphere);
+
+          // Determine the distance required to fit the sphere within camera fov
+          const fov = camera.fov * (Math.PI / 180); // convert to radians
+          // Distance from sphere center to camera to fully fit the sphere
+          let distance = Math.abs(radius / Math.sin(fov / 2));
+          if (!isFinite(distance) || distance === 0) {
+            distance = Math.max(size.x, size.y, size.z) * 2.5;
+          }
+          // Add small margin
+          distance *= 1.15;
+
+          // Position camera along a normalized diagonal so it's not axis-aligned
+          const diag = new THREE.Vector3(1, 1, 1).normalize();
+          camera.position.copy(diag.multiplyScalar(distance).add(centerSphere));
+          camera.lookAt(centerSphere);
+
+          // Configure controls limits so user can zoom in/out but initial view is fully zoomed out
+          controls.maxDistance = distance * 10;
+          controls.minDistance = Math.max(1, radius * 0.1);
+          controls.update();
+
+          // Save initial state for reset button
+          initialState = {
+            position: camera.position.clone(),
+            target: controls.target.clone(),
+            maxDistance: controls.maxDistance,
+            minDistance: controls.minDistance
+          };
+
+          // Wire reset button if present
+          const resetBtn = container.querySelector('.reset-camera-btn');
+          if (resetBtn) {
+            resetBtn.disabled = false;
+            resetBtn.addEventListener('click', () => {
+              if (!initialState) return;
+              const duration = 1000; // milliseconds
+              const startTime = performance.now();
+
+              const startPos = camera.position.clone();
+              const startQuat = camera.quaternion.clone();
+              const endPos = initialState.position.clone();
+
+              // compute end quaternion so camera looks at the target
+              const tmpCam = new THREE.PerspectiveCamera();
+              tmpCam.position.copy(endPos);
+              tmpCam.lookAt(initialState.target);
+              const endQuat = tmpCam.quaternion.clone();
+
+              const startTarget = controls.target.clone();
+              const endTarget = initialState.target.clone();
+
+              // disable controls during animation
+              controls.enabled = false;
+
+              function animateReset(now) {
+                const t = Math.min(1, (now - startTime) / duration);
+                // easeInOut
+                const ease = 0.5 - 0.5 * Math.cos(Math.PI * t);
+
+                // interpolate position
+                camera.position.lerpVectors(startPos, endPos, ease);
+                // slerp quaternion
+                THREE.Quaternion.slerp(startQuat, endQuat, camera.quaternion, ease);
+                // interpolate controls target
+                controls.target.lerpVectors(startTarget, endTarget, ease);
+
+                controls.update();
+
+                if (t < 1) {
+                  requestAnimationFrame(animateReset);
+                } else {
+                  // final state
+                  camera.position.copy(endPos);
+                  camera.quaternion.copy(endQuat);
+                  controls.target.copy(endTarget);
+                  controls.maxDistance = initialState.maxDistance;
+                  controls.minDistance = initialState.minDistance;
+                  controls.update();
+                  controls.enabled = true;
+                }
+              }
+
+              requestAnimationFrame(animateReset);
+            });
+          }
+
+          // Render loop
+          function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          }
+          animate();
+        },
+        undefined,
+        function (err) {
+          console.error('STL load error:', err);
+          errorNode.style.display = '';
         }
-        animate();
+      );
+
+      // Resize handling
+      const resizeObserver = new ResizeObserver(() => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        renderer.setSize(w, h);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
       });
+      resizeObserver.observe(container);
     }
 
     // Load all viewers
