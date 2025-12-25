@@ -243,7 +243,7 @@ def load_feature_param_model(model_path: Optional[Path] = None, device: Optional
     device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FeatureParamModel(features, param_specs, hetero=heteroscedastic).to(device)
 
-    model_path = model_path or (current_dir / "featureparammodel.pth")
+    model_path = model_path or (current_dir / "FeatureClassifier.pth")
     if not model_path.exists():
         raise FileNotFoundError(f"model file not found at {model_path}")
 
@@ -289,6 +289,98 @@ def classify_feature_once(
     x = torch.cat([working_tensor, final_tensor], dim=0).unsqueeze(0).to(device)
 
     out = mdl(x)
+    logits = out["logits"][0]
+    probs = logits.softmax(dim=0)
+    top_idx = int(probs.argmax().item())
+
+    return {
+        "top1": features[top_idx],
+        "top1_prob": float(probs[top_idx].item()),
+        "probs": probs.cpu().tolist(),
+        "logits": logits.cpu().tolist(),
+    }
+
+
+# -------------------- public api --------------------
+_model_cache: Optional[FeatureParamModel] = None
+_model_device: Optional[torch.device] = None
+
+@torch.no_grad()
+def _prepare_input(working, final) -> torch.Tensor:
+    """
+    accepts either file paths (str | Path) or already-loaded tensors/images.
+    returns a 4d tensor [1, 2, h, w] ready for the network.
+    - if tensors: expects [1,h,w] or [h,w] in [0,1] or [-1,1] range; will normalize.
+    - if paths or pil: will use module transform.
+    """
+    def to_tensor(img):
+        if isinstance(img, (str, Path)):
+            img = Image.open(img).convert("RGB")
+            return transform(img)
+        if isinstance(img, Image.Image):
+            return transform(img.convert("RGB"))
+        if isinstance(img, torch.Tensor):
+            t = img
+            # allow [h,w], [1,h,w], or [c,h,w]
+            if t.dim() == 2:
+                t = t.unsqueeze(0)
+            if t.size(0) == 1:
+                # assume already grayscale normalized roughly; map to [-1,1]
+                t = (t - t.min()) / (t.max() - t.min() + 1e-8)
+                t = t * 2 - 1
+                return t
+            if t.size(0) == 3:
+                # convert rgb -> grayscale via transform behavior
+                # bring to pil-like range [0,1] if needed
+                t = (t - t.min()) / (t.max() - t.min() + 1e-8)
+                pil_like = transforms.ToPILImage()(t)
+                return transform(pil_like)
+            raise ValueError("tensor must be [h,w], [1,h,w], or [3,h,w]")
+        raise TypeError("unsupported input type for image")
+
+    w = to_tensor(working)
+    f = to_tensor(final)
+    x = torch.cat([w, f], dim=0).unsqueeze(0)  # [1,2,h,w]
+    return x
+
+@torch.no_grad()
+def classify_feature(
+    working,
+    final,
+    model_path: Optional[Path] = None,
+    device: Optional[torch.device] = None,
+) -> Dict[str, Any]:
+    """
+    classifies the feature change between a working model and a final model.
+
+    inputs may be:
+      - paths to images (str | Path)
+      - pil images
+      - torch tensors shaped [h,w], [1,h,w], or [3,h,w]
+
+    returns dict with keys: {"top1", "top1_prob", "probs", "logits"}
+
+    this function caches the loaded model the first time it is called to avoid
+    reloading weights on subsequent invocations.
+    """
+    global _model_cache, _model_device
+
+    dev = device or _model_device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    if _model_cache is None or _model_device != dev:
+        _model_cache = FeatureParamModel(features, param_specs, hetero=heteroscedastic).to(dev)
+        mp = model_path or (current_dir / "FeatureClassifier.pth")
+        if not Path(mp).exists():
+            raise FileNotFoundError(f"model file not found at {mp}")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            checkpoint = torch.load(mp, map_location=dev)
+            _model_cache.load_state_dict(checkpoint["model_state_dict"])
+        _model_cache.eval()
+        _model_device = dev
+
+    x = _prepare_input(working, final).to(dev)
+    out = _model_cache(x)
     logits = out["logits"][0]
     probs = logits.softmax(dim=0)
     top_idx = int(probs.argmax().item())

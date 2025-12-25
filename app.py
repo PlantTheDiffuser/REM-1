@@ -1,39 +1,33 @@
 # app.py
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
 from pathlib import Path
 import shutil
+from PIL import Image
+
 import ConvertSTLtoVoxel as conv
 import PreflightCheckTrainer as PreflightCheck
-import ReverseEngineeringModel as REM
+import ReverseEngineeringModel as REM  # <-- new model lives here
 
 UPLOAD_FOLDER = Path("uploads")
 TEMP_FOLDER = Path("temp")
+STATIC_FOLDER = Path("static")
 ALLOWED_EXTENSIONS = {"stl"}
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-UPLOAD_FOLDER.mkdir(exist_ok=True)
-TEMP_FOLDER.mkdir(exist_ok=True)
+for folder in (UPLOAD_FOLDER, TEMP_FOLDER, STATIC_FOLDER):
+    folder.mkdir(exist_ok=True)
 
-STATIC_FOLDER = Path("static")
-STATIC_FOLDER.mkdir(exist_ok=True)
-
+# ---------------------------------------------------------------
+# Utility functions
+# ---------------------------------------------------------------
 
 def clear_old_uploads():
-    """Remove previous uploads/temp files and app-generated static STLs.
-
-    This removes files inside the `uploads` and `temp` folders and only
-    removes the app-created STL files in `static` (uploaded_model.stl and
-    working-*.stl). It avoids deleting other static assets.
-    """
-    # Remove files and directories from uploads and temp
+    """Remove previous uploads/temp files and app-generated static STLs."""
     for folder in (UPLOAD_FOLDER, TEMP_FOLDER):
-        try:
-            folder.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
+        folder.mkdir(parents=True, exist_ok=True)
         for p in folder.iterdir():
             try:
                 if p.is_dir():
@@ -41,14 +35,11 @@ def clear_old_uploads():
                 else:
                     p.unlink()
             except Exception as e:
-                # Log and continue; don't raise to avoid breaking request handling
                 print(f"Warning: failed to remove {p}: {e}")
 
-    # Remove only the STL files that the app creates in static
     try:
-        static = STATIC_FOLDER
         for pattern in ("uploaded_model.stl", "working-*.stl"):
-            for p in static.glob(pattern):
+            for p in STATIC_FOLDER.glob(pattern):
                 try:
                     p.unlink()
                 except Exception as e:
@@ -59,21 +50,25 @@ def clear_old_uploads():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# ---------------------------------------------------------------
+# Main route
+# ---------------------------------------------------------------
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         if request.form.get('reset'):
-            # Clean up old files and return to the index
             clear_old_uploads()
             return render_template('index.html')
 
         if 'file' not in request.files:
             return render_template('index.html', error='No file part')
+
         file = request.files['file']
         if file.filename == '':
             return render_template('index.html', error='No file selected')
+
         if file and allowed_file(file.filename):
-            # Remove previous uploads/temp/static STL files so each run is clean
             clear_old_uploads()
             filename = secure_filename(file.filename)
             file_path = UPLOAD_FOLDER / filename
@@ -89,7 +84,6 @@ def index():
                 # Step 2: Locate PNG output
                 png_filename = filename.replace('.STL', '.png').replace('.stl', '.png')
                 png_path = TEMP_FOLDER / png_filename
-
                 if not png_path.exists():
                     return render_template('index.html', error='PNG conversion failed.')
 
@@ -98,28 +92,35 @@ def index():
                 if result == 'MESHmodel':
                     return render_template('index.html', result='❌ File is a mesh model and cannot be reverse engineered.')
 
-                # Step 4: Run Reverse Engineering Model
-                features = REM.ReverseEngineer(png_path)
-                # Ensure static folder exists and save STL copies for front-end viewers
-                static_dir = Path("static")
-                static_dir.mkdir(exist_ok=True)
+                # ensure working image exists
+                working_path = png_path.parent / "working.png"
+                if not working_path.exists():
+                    Image.new("L", (150, 150**2), color=0).save(working_path)
+                
+                # Step 4: Run Reverse Engineering Model (classification)
+                features = [str(png_path)]
 
-                # Save a master copy (for possible future use)
-                static_stl_path = static_dir / "uploaded_model.stl"
+                try:
+                    # explicitly pass path to FeatureClassifier.pth
+                    model_path = Path(__file__).resolve().parent / "FeatureClassifier.pth"
+                    prediction = REM.classify_feature(working_path, png_path, model_path=model_path)
+                    features.append(prediction["top1"])
+                except Exception as e:
+                    return render_template('index.html', error=f'Classification error: {e}')
+
+                # Step 5: Prepare static STL files for viewer
+                static_stl_path = STATIC_FOLDER / "uploaded_model.stl"
                 shutil.copy(file_path, static_stl_path)
 
-                # The template expects 'working-1.stl', 'working-2.stl', ... in the static folder
-                # Create one copy per predicted feature (skip the first entry which is the image path)
                 for idx, _f in enumerate(features[1:], start=1):
-                    target = static_dir / f"working-{idx}.stl"
-                    # Copy the original STL so Three.js can load it for each viewer
+                    target = STATIC_FOLDER / f"working-{idx}.stl"
                     shutil.copy(file_path, target)
 
-
-                # Clean up uploaded and temp files
+                # Clean up
                 file_path.unlink(missing_ok=True)
                 temp_stl_path.unlink(missing_ok=True)
                 png_path.unlink(missing_ok=True)
+
                 return render_template('index.html', features=features, result='✅ CAD Model detected.')
 
             except Exception as e:
@@ -129,10 +130,18 @@ def index():
 
     return render_template('index.html')
 
+# ---------------------------------------------------------------
+# Template helpers
+# ---------------------------------------------------------------
+
 @app.template_filter('basename_noext')
 def basename_noext(path):
     import os
     return os.path.splitext(os.path.basename(path))[0]
+
+# ---------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------
 
 if __name__ == '__main__':
     app.run(debug=True)

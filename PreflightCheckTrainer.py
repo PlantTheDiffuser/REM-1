@@ -107,8 +107,6 @@ CADmodel_test = str(current_dir / 'PreflightCheckTestData/CADmodel')
 MESHmodel_test = str(current_dir / 'PreflightCheckTestData/MESHmodel')
 
 
-
-
 def load_model(model_path=None, device=None):
     """
     Loads the trained model from disk and returns it.

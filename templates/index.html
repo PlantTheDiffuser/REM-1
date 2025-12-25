@@ -95,6 +95,40 @@
       opacity: 0.5;
       cursor: default;
     }
+    /* Processing overlay styles */
+    #processing-overlay {
+      position: fixed;
+      left: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .processing-box {
+      background: #fff;
+      padding: 20px 24px;
+      border-radius: 8px;
+      width: 400px;
+      text-align: center;
+    }
+    .progress-wrap {
+      background: #eee;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #5b9cff, #2b6cff);
+      width: 0%;
+      transition: width 250ms linear;
+    }
+    .progress-text { margin-top: 8px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -108,6 +142,18 @@
     <input type="file" name="file">
     <input type="submit" value="Run">
   </form>
+
+  <!-- Processing overlay + progress bar -->
+  <div id="processing-overlay" style="display:none;">
+    <div class="processing-box">
+      <div class="processing-message">Processing, please wait...</div>
+      <div class="progress-wrap">
+        <div id="progress-bar" class="progress-bar" style="width:0%"></div>
+      </div>
+      <div id="progress-text" class="progress-text">0%</div>
+    </div>
+  </div>
+
 
   {% if error %}
     <p style="color:red;">{{ error }}</p>
@@ -149,6 +195,79 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script>
+    // Form submission hijack to show processing overlay and progress
+    (function() {
+      const form = document.querySelector('form[action="/"]');
+      if (!form) return;
+
+      form.addEventListener('submit', function (e) {
+        // Allow reset posts to proceed normally
+        if (form.querySelector('input[name="reset"]')) return;
+        e.preventDefault();
+
+        const overlay = document.getElementById('processing-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        overlay.style.display = '';
+        progressBar.style.width = '0%';
+        progressText.textContent = '0%';
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action);
+
+        xhr.upload.addEventListener('progress', function (ev) {
+          if (ev.lengthComputable) {
+            const percent = Math.round(ev.loaded / ev.total * 100);
+            progressBar.style.width = percent + '%';
+            progressText.textContent = percent + '% (upload)';
+          }
+        });
+
+        // While server processes (after upload completes) we don't get progress events.
+        // Show an indeterminate progress animation by pulsing the bar.
+        let pulsing = false;
+        function startPulse() {
+          pulsing = true;
+          progressBar.style.transition = 'none';
+          progressBar.style.width = '30%';
+          setTimeout(() => {
+            if (!pulsing) return;
+            progressBar.style.transition = 'width 800ms ease-in-out';
+            progressBar.style.width = '70%';
+          }, 50);
+        }
+        function stopPulse() {
+          pulsing = false;
+          progressBar.style.transition = 'width 250ms linear';
+        }
+
+        xhr.addEventListener('load', function () {
+          // Replace the page with server response (assumes HTML response)
+          stopPulse();
+          document.open();
+          document.write(xhr.responseText);
+          document.close();
+        });
+
+        xhr.addEventListener('error', function () {
+          stopPulse();
+          alert('Upload failed.');
+          overlay.style.display = 'none';
+        });
+
+        xhr.onreadystatechange = function() {
+          if (xhr.readyState === 2) {
+            // headers received: now start pulsing for server processing
+            startPulse();
+            progressText.textContent = 'Processing...';
+          }
+        };
+
+        const formData = new FormData(form);
+        xhr.send(formData);
+      });
+    })();
+
     function loadSTL(containerId) {
       const container = document.getElementById(containerId);
       const stlUrl = container.getAttribute('data-stl');
